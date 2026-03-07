@@ -22,8 +22,10 @@ nav button{background:#132013;border:1px solid #2aff00;color:#9cff57;padding:6px
 .card h2 { color: #8fbc8f; margin-bottom: 15px; font-size: 1.5rem; } 
 .card h3 { color: #a3d9a5; font-size: 1.2rem; } 
 
-/* 승인 대기 배지 (관리자 모드에서만 보임) */
-.pending-badge { background: #442222; color: #ff5555; padding: 2px 6px; border-radius: 3px; font-size: 11px; margin-right: 5px; border: 1px solid #ff5555; }
+/* 배지 스타일 */
+.badge { padding: 2px 6px; border-radius: 3px; font-size: 11px; margin-right: 5px; border: 1px solid; }
+.pending-badge { background: #442222; color: #ff5555; border-color: #ff5555; }
+.update-badge { background: #223344; color: #55aaff; border-color: #55aaff; }
 
 /* 3. 댓글 가독성 개선 */
 .comment-section-title { margin: 30px 0 15px; color: #8fbc8f; font-size: 1.1rem; border-bottom: 1px solid rgba(0,255,0,0.1); padding-bottom: 5px;}
@@ -109,7 +111,7 @@ let allPosts={}
 let currentPostKey=null
 let currentCategory="all"
 let currentPage = 1;
-let isAdminView = false; // 관리자 모드 상태
+let isAdminView = false;
 const POSTS_PER_PAGE = 10;
 
 // 비밀 단축키 감지: Ctrl + Shift + A
@@ -119,7 +121,7 @@ window.addEventListener('keydown', function(e) {
         openPasswordModal("ADMIN ACCESS", (pw)=>{
             if(pw === ADMIN_PIN_CODE){
                 isAdminView = !isAdminView;
-                alert(isAdminView ? "관리자 모드가 활성화되었습니다. (모든 글 노출)" : "관리자 모드가 해제되었습니다.");
+                alert(isAdminView ? "관리자 모드 활성화" : "관리자 모드 해제");
                 renderList();
             } else { alert("ACCESS DENIED"); }
         });
@@ -159,14 +161,11 @@ return count
 }
 
 window.filterCategory=function(category){
-currentCategory=category
-currentPage=1 
-renderList()
+currentCategory=category; currentPage=1; renderList()
 }
 
 window.changePage=function(direction){
-  currentPage += direction;
-  renderList();
+  currentPage += direction; renderList();
 }
 
 window.renderList=function(){
@@ -176,17 +175,13 @@ container.innerHTML=''
 
 let postsArray=Object.entries(allPosts)
 
-// 승인 필터링 로직
 postsArray=postsArray.filter(([k,p])=>{
-    // 관리자 모드가 아니고, 승인되지 않은 글이라면 숨김
     if(!isAdminView && p.approved !== true) return false;
-    
     if(p.pinned === true) return true; 
     if(currentCategory==="all") return true
     return p.category===currentCategory
 })
 
-// 정렬: 고정글 최상단 -> 최신순
 postsArray.sort((a,b)=>{
 if(a[1].pinned&&!b[1].pinned)return -1
 if(!a[1].pinned&&b[1].pinned)return 1
@@ -196,7 +191,7 @@ return b[1].date-a[1].date
 if(isAdminView) {
     const info = document.createElement('div');
     info.style.padding="10px"; info.style.background="#222"; info.style.color="#ffcc00"; info.style.marginBottom="20px"; info.style.fontSize="12px";
-    info.innerHTML = "<strong>[ADMIN MODE]</strong> 승인 대기 중인 글을 포함해 모든 글을 보고 있습니다.";
+    info.innerHTML = "<strong>[ADMIN MODE]</strong> 게시글 관리(신규 승인/수정 승인) 중입니다.";
     container.appendChild(info);
 }
 
@@ -205,20 +200,18 @@ const totalPages = Math.ceil(totalPosts / POSTS_PER_PAGE) || 1;
 if(currentPage > totalPages) currentPage = totalPages;
 
 const startIndex = (currentPage - 1) * POSTS_PER_PAGE;
-const endIndex = startIndex + POSTS_PER_PAGE;
-const paginatedPosts = postsArray.slice(startIndex, endIndex);
+const paginatedPosts = postsArray.slice(startIndex, startIndex + POSTS_PER_PAGE);
 
 paginatedPosts.forEach(([key,post])=>{
 const card=document.createElement('div')
 card.className='card'
 if(post.pinned) card.style.borderColor = "rgba(42, 255, 0, 0.5)";
-
 card.onclick=()=>renderDetail(key)
-
 card.innerHTML=`
 <div class='meta'>[${post.category}] ${escapeHTML(post.nickname)}</div>
 <h3>
-    ${isAdminView && !post.approved ? '<span class="pending-badge">WAITING</span>' : ''}
+    ${isAdminView && !post.approved ? '<span class="badge pending-badge">WAITING</span>' : ''}
+    ${isAdminView && post.pendingUpdate ? '<span class="badge update-badge">UPDATING</span>' : ''}
     ${post.pinned?'📌 ':''}${escapeHTML(truncateTitle(post.title))}
 </h3>
 <div class="time">${formatTime(post.date)}</div>
@@ -228,17 +221,14 @@ container.appendChild(card)
 })
 
 if(totalPosts > 0) {
-  const paginationDiv = document.createElement('div');
-  paginationDiv.className = 'pagination';
-  const prevDisabled = currentPage === 1 ? 'disabled style="opacity:0.3; cursor:default;"' : '';
-  const nextDisabled = currentPage === totalPages ? 'disabled style="opacity:0.3; cursor:default;"' : '';
-
-  paginationDiv.innerHTML = `
-    <button class="action-btn" onclick="changePage(-1)" ${prevDisabled}>&lt; PREV</button>
+  const pDiv = document.createElement('div');
+  pDiv.className = 'pagination';
+  pDiv.innerHTML = `
+    <button class="action-btn" onclick="changePage(-1)" ${currentPage===1?'disabled style="opacity:0.3"':''}>&lt; PREV</button>
     <span class="page-info">${currentPage} / ${totalPages}</span>
-    <button class="action-btn" onclick="changePage(1)" ${nextDisabled}>NEXT &gt;</button>
+    <button class="action-btn" onclick="changePage(1)" ${currentPage===totalPages?'disabled style="opacity:0.3"':''}>NEXT &gt;</button>
   `;
-  container.appendChild(paginationDiv);
+  container.appendChild(pDiv);
 }
 }
 
@@ -271,15 +261,10 @@ window.submitPost=function(){
 const isPinned = document.getElementById('w_pin').checked;
 const category = document.getElementById('w_category').value;
 const adminInput = document.getElementById('w_admin').value;
+let shouldApprove = (category.includes("공지") || isPinned) && adminInput === ADMIN_PIN_CODE;
 
-let shouldApprove = false;
-// 보안 검증: 공지 또는 고정글은 관리자 코드 필요하며 즉시 승인됨
-if(category.includes("공지") || isPinned){
-    if(adminInput !== ADMIN_PIN_CODE){
-        alert("공지 작성 및 고정은 관리자 전용입니다.");
-        return;
-    }
-    shouldApprove = true;
+if((category.includes("공지") || isPinned) && adminInput !== ADMIN_PIN_CODE){
+    alert("관리자 권한이 없습니다."); return;
 }
 
 push(postsRef,{
@@ -290,36 +275,88 @@ title:document.getElementById('w_title').value,
 content:document.getElementById('w_content').value,
 image:document.getElementById('w_image').value||"",
 pinned:isPinned,
-approved:shouldApprove, // 기본은 false (승인제)
+approved:shouldApprove, 
 date:Date.now()
 })
-alert(shouldApprove ? "게시되었습니다." : "등록되었습니다. 관리자 승인 후 목록에 표시됩니다.");
+alert(shouldApprove ? "게시되었습니다." : "등록되었습니다. 승인 후 표시됩니다.");
 currentPage = 1; renderList()
 }
 
-window.submitComment=function(postKey){
-const nick = document.getElementById('c_nick').value;
-const content = document.getElementById('c_content').value;
-if(!nick || !content){ alert("내용을 입력해주세요"); return; }
-push(ref(db,'posts/'+postKey+'/comments'),{
-nickname:nick,
-password:document.getElementById('c_pass').value,
-content:content,
-image:document.getElementById('c_image').value||"",
-date:Date.now()
-})
+// 수정 화면
+window.editPost=function(key){
+    const post = allPosts[key];
+    openPasswordModal("수정 비밀번호 확인", (pw)=>{
+        if(pw === post.password || pw === MASTER_DELETE_CODE){
+            const container=document.getElementById('postList');
+            // 수정 대기 중인 데이터가 있으면 그걸 불러오고, 없으면 현재 데이터 불러옴
+            const data = post.pendingUpdate || post;
+            container.innerHTML=`
+            <div class="card" style="cursor:default">
+            <h2>EDIT POST ${post.pendingUpdate ? '(승인 대기 중인 내용)' : ''}</h2>
+            <select id="e_category">
+                <option ${data.category==='잡담'?'selected':''}>잡담</option>
+                <option ${data.category==='정보'?'selected':''}>정보</option>
+                <option ${data.category==='질문'?'selected':''}>질문</option>
+                <option ${data.category==='거래'?'selected':''}>거래</option>
+                <option ${data.category==='도움'?'selected':''}>도움</option>
+                <option ${data.category==='공지'?'selected':''}>공지</option>
+            </select>
+            <label style="display:block;margin-top:10px; font-size:12px;">
+                <input type="checkbox" id="e_pin" style="width:auto" ${data.pinned?'checked':''}> 상단 고정 (관리자 전용)
+            </label>
+            <input id="e_admin" placeholder="관리자 코드 (관리자 즉시 수정 시 필요)">
+            <input id="e_title" value="${escapeHTML(data.title)}" placeholder="제목">
+            <textarea id="e_content" style="height:200px" placeholder="내용">${escapeHTML(data.content)}</textarea>
+            <input id="e_image" value="${data.image||''}" placeholder="이미지 URL">
+            <button class="action-btn" onclick="updatePost('${key}')">수정 신청</button>
+            <button class="action-btn" onclick="renderDetail('${key}')">취소</button>
+            </div>`;
+        } else { alert("비밀번호가 틀립니다."); }
+    });
 }
 
-window.submitReply=function(postKey,commentKey){
-const nick = document.getElementById("r_nick-"+commentKey).value;
-const content = document.getElementById("r_content-"+commentKey).value;
-if(!nick || !content){ alert("내용을 입력해주세요"); return; }
-push(ref(db,'posts/'+postKey+'/comments/'+commentKey+'/replies'),{
-nickname:nick,
-password:document.getElementById("r_pass-"+commentKey).value,
-content:content,
-date:Date.now()
-})
+// 수정 신청 처리
+window.updatePost=function(key){
+    const post = allPosts[key];
+    const isPinned = document.getElementById('e_pin').checked;
+    const category = document.getElementById('e_category').value;
+    const adminInput = document.getElementById('e_admin').value;
+
+    const editData = {
+        category: category,
+        pinned: isPinned,
+        title: document.getElementById('e_title').value,
+        content: document.getElementById('e_content').value,
+        image: document.getElementById('e_image').value
+    };
+
+    // 관리자 코드가 맞으면 즉시 수정
+    if(adminInput === ADMIN_PIN_CODE){
+        update(ref(db, 'posts/'+key), { ...editData, pendingUpdate: null }).then(()=>{
+            alert("관리자 권한으로 즉시 수정되었습니다.");
+            renderDetail(key);
+        });
+    } else {
+        // 일반 유저는 승인 대기 필드에 저장
+        update(ref(db, 'posts/'+key+'/pendingUpdate'), editData).then(()=>{
+            alert("수정 신청이 완료되었습니다. 관리자 승인 후 반영됩니다.");
+            renderDetail(key);
+        });
+    }
+}
+
+// 수정 승인 (관리자 전용)
+window.approveUpdate = function(key){
+    const post = allPosts[key];
+    if(!post.pendingUpdate) return;
+
+    update(ref(db, 'posts/'+key), {
+        ...post.pendingUpdate,
+        pendingUpdate: null // 승인 후 대기 데이터 삭제
+    }).then(()=>{
+        alert("수정 내용이 승인 및 반영되었습니다.");
+        renderDetail(key);
+    });
 }
 
 window.renderDetail = function(key){
@@ -342,18 +379,10 @@ ${c.image?`<img src="${c.image}" class="comment-image">`:""}
 <input id="r_nick-${cid}" placeholder="닉네임" style="width:48%"><input id="r_pass-${cid}" type="password" placeholder="비밀번호" style="width:48%">
 <textarea id="r_content-${cid}" placeholder="답글 내용을 입력하세요"></textarea>
 <button class="action-btn" onclick="submitReply('${key}','${cid}')">답글등록</button>
-</div>
-`
+</div>`
 if(c.replies){
 Object.entries(c.replies).forEach(([rid,r])=>{
-commentsHTML+=`
-<div class='reply'>
-<b>└ ${escapeHTML(r.nickname)}</b>
-<div class="reply-text">${escapeHTML(r.content)}</div>
-<div class="time">${formatTime(r.date)}</div>
-<button class="action-btn" style="opacity:0.5; padding:2px 6px;" onclick="deleteReply('${key}','${cid}','${rid}','${r.password}')">삭제</button>
-</div>
-`
+commentsHTML+=`<div class='reply'><b>└ ${escapeHTML(r.nickname)}</b><div class="reply-text">${escapeHTML(r.content)}</div><div class="time">${formatTime(r.date)}</div><button class="action-btn" style="opacity:0.5; padding:2px 6px;" onclick="deleteReply('${key}','${cid}','${rid}','${r.password}')">삭제</button></div>`
 })
 }
 commentsHTML+="</div>"
@@ -365,11 +394,14 @@ container.innerHTML=`
 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
     <button class='action-btn' onclick="renderList()">← 목록으로</button>
     <div>
-        ${(isAdminView && !post.approved) ? `<button class='action-btn' style="background:#2a442a" onclick="approvePost('${key}')">글 승인하기</button>` : ''}
+        ${(isAdminView && !post.approved) ? `<button class='action-btn' style="background:#2a442a" onclick="approvePost('${key}')">신규 승인</button>` : ''}
+        ${(isAdminView && post.pendingUpdate) ? `<button class='action-btn' style="background:#223344; border-color:#55aaff; color:#55aaff" onclick="approveUpdate('${key}')">수정 승인</button>` : ''}
+        <button class='action-btn' style="border-color:#2aff00; color:#9cff57" onclick="editPost('${key}')">글 수정</button>
         <button class='action-btn' style="border-color:#555; color:#888" onclick="deletePost('${key}','${post.password}')">글 삭제</button>
     </div>
 </div>
 <hr>
+${post.pendingUpdate ? `<div style="color:#55aaff; font-size:12px; margin-bottom:10px;">! 이 글은 현재 내용 수정을 신청하여 승인 대기 중입니다.</div>` : ''}
 <h2>${escapeHTML(post.title)}</h2>
 <div class='meta'>작성자: ${escapeHTML(post.nickname)} | ${formatTime(post.date)}</div>
 <p style="color: #d1d1d1; margin: 25px 0; line-height: 1.8; font-size:15px; white-space:pre-wrap;">${escapeHTML(post.content)}</p>
@@ -385,56 +417,58 @@ ${commentsHTML}
     <input id='c_image' placeholder='이미지 URL (선택)'>
     <button class='action-btn' style="width:100%; padding:10px; margin-top:10px; background:#1a2a1a;" onclick="submitComment('${key}')">댓글 등록</button>
 </div>
-</div>
-`
+</div>`
 }
 
 window.approvePost = function(key){
     update(ref(db, 'posts/'+key), { approved: true }).then(()=>{
-        alert("승인되었습니다.");
-        renderDetail(key);
+        alert("게시글이 승인되었습니다."); renderDetail(key);
     });
 }
 
+window.submitComment=function(postKey){
+    const nick = document.getElementById('c_nick').value;
+    const content = document.getElementById('c_content').value;
+    if(!nick || !content){ alert("내용을 입력해주세요"); return; }
+    push(ref(db,'posts/'+postKey+'/comments'),{ nickname:nick, password:document.getElementById('c_pass').value, content:content, image:document.getElementById('c_image').value||"", date:Date.now() })
+}
+
+window.submitReply=function(postKey,commentKey){
+    const nick = document.getElementById("r_nick-"+commentKey).value;
+    const content = document.getElementById("r_content-"+commentKey).value;
+    if(!nick || !content){ alert("내용을 입력해주세요"); return; }
+    push(ref(db,'posts/'+postKey+'/comments/'+commentKey+'/replies'),{ nickname:nick, password:document.getElementById("r_pass-"+commentKey).value, content:content, date:Date.now() })
+}
+
 window.deletePost=function(key,password){
-openPasswordModal("글 삭제 인증", function(input){
-if(input===password || input===MASTER_DELETE_CODE){
-remove(ref(db,'posts/'+key)).then(()=>{ currentPostKey=null; renderList(); })
-}else{ alert("비밀번호 불일치"); }
-})
+    openPasswordModal("글 삭제 인증", (input)=>{
+        if(input===password || input===MASTER_DELETE_CODE){ remove(ref(db,'posts/'+key)).then(()=>{ currentPostKey=null; renderList(); }) }
+        else{ alert("비밀번호 불일치"); }
+    })
 }
 
 window.deleteComment=function(postKey,commentKey,password){
-openPasswordModal("댓글 삭제 인증", function(input){
-if(input===password || input===MASTER_DELETE_CODE){
-remove(ref(db,'posts/'+postKey+'/comments/'+commentKey)).then(()=>{ renderDetail(postKey) })
-}else{ alert("비밀번호 불일치"); }
-})
+    openPasswordModal("댓글 삭제 인증", (input)=>{
+        if(input===password || input===MASTER_DELETE_CODE){ remove(ref(db,'posts/'+postKey+'/comments/'+commentKey)).then(()=>{ renderDetail(postKey) }) }
+        else{ alert("비밀번호 불일치"); }
+    })
 }
 
 window.deleteReply=function(postKey,commentKey,replyKey,password){
-openPasswordModal("답글 삭제 인증", function(input){
-if(input===password || input===MASTER_DELETE_CODE){
-remove(ref(db,'posts/'+postKey+'/comments/'+commentKey+'/replies/'+replyKey)).then(()=>{ renderDetail(postKey) })
-}else{ alert("비밀번호 불일치"); }
-})
+    openPasswordModal("답글 삭제 인증", (input)=>{
+        if(input===password || input===MASTER_DELETE_CODE){ remove(ref(db,'posts/'+postKey+'/comments/'+commentKey+'/replies/'+replyKey)).then(()=>{ renderDetail(postKey) }) }
+        else{ alert("비밀번호 불일치"); }
+    })
 }
 
-window.toggleReply=function(cid){
-const box=document.getElementById("replyBox-"+cid)
-box.style.display=box.style.display==="none"?"block":"none"
-}
+window.toggleReply=function(cid){ const box=document.getElementById("replyBox-"+cid); box.style.display=box.style.display==="none"?"block":"none"; }
 
 function formatTime(timestamp){
-const d=new Date(timestamp)
-const pad = (n) => n.toString().padStart(2, '0');
-return `2033.${pad(d.getMonth()+1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+    const d=new Date(timestamp); const pad = (n) => n.toString().padStart(2, '0');
+    return `2033.${pad(d.getMonth()+1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-function escapeHTML(str){
-if(!str) return ""
-return str.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&#039;")
-}
+function escapeHTML(str){ return str?str.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&#039;"):"" }
 </script>
 </body>
 </html>
