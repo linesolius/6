@@ -25,7 +25,7 @@ nav button{background:#132013;border:1px solid #2aff00;color:#9cff57;padding:6px
 /* 배지 스타일 */
 .badge { padding: 2px 6px; border-radius: 3px; font-size: 11px; margin-right: 5px; border: 1px solid; }
 .pending-badge { background: #442222; color: #ff5555; border-color: #ff5555; }
-.update-badge { background: #223344; color: #55aaff; border-color: #55aaff; }
+.update-badge { background: #1a2a3a; color: #55aaff; border-color: #55aaff; }
 
 /* 3. 댓글 가독성 개선 */
 .comment-section-title { margin: 30px 0 15px; color: #8fbc8f; font-size: 1.1rem; border-bottom: 1px solid rgba(0,255,0,0.1); padding-bottom: 5px;}
@@ -121,7 +121,7 @@ window.addEventListener('keydown', function(e) {
         openPasswordModal("ADMIN ACCESS", (pw)=>{
             if(pw === ADMIN_PIN_CODE){
                 isAdminView = !isAdminView;
-                alert(isAdminView ? "관리자 모드 활성화" : "관리자 모드 해제");
+                alert(isAdminView ? "관리자 모드 활성화: 수정 신청된 내용이 미리 보입니다." : "관리자 모드 해제");
                 renderList();
             } else { alert("ACCESS DENIED"); }
         });
@@ -190,8 +190,8 @@ return b[1].date-a[1].date
 
 if(isAdminView) {
     const info = document.createElement('div');
-    info.style.padding="10px"; info.style.background="#222"; info.style.color="#ffcc00"; info.style.marginBottom="20px"; info.style.fontSize="12px";
-    info.innerHTML = "<strong>[ADMIN MODE]</strong> 게시글 관리(신규 승인/수정 승인) 중입니다.";
+    info.style.padding="10px"; info.style.background="#1a2233"; info.style.color="#55aaff"; info.style.marginBottom="20px"; info.style.fontSize="12px"; info.style.border="1px solid #55aaff";
+    info.innerHTML = "<strong>[ADMIN MODE]</strong> 수정 신청된 글은 파란색 배지와 함께 수정된 내용으로 표시됩니다.";
     container.appendChild(info);
 }
 
@@ -206,13 +206,17 @@ paginatedPosts.forEach(([key,post])=>{
 const card=document.createElement('div')
 card.className='card'
 if(post.pinned) card.style.borderColor = "rgba(42, 255, 0, 0.5)";
+
+// 핵심: 관리자 모드일 경우 수정 대기중인 데이터(pendingUpdate)를 우선 참조
+const displayData = (isAdminView && post.pendingUpdate) ? post.pendingUpdate : post;
+
 card.onclick=()=>renderDetail(key)
 card.innerHTML=`
-<div class='meta'>[${post.category}] ${escapeHTML(post.nickname)}</div>
+<div class='meta'>[${displayData.category}] ${escapeHTML(post.nickname)}</div>
 <h3>
     ${isAdminView && !post.approved ? '<span class="badge pending-badge">WAITING</span>' : ''}
-    ${isAdminView && post.pendingUpdate ? '<span class="badge update-badge">UPDATING</span>' : ''}
-    ${post.pinned?'📌 ':''}${escapeHTML(truncateTitle(post.title))}
+    ${isAdminView && post.pendingUpdate ? '<span class="badge update-badge">PREVIEW EDIT</span>' : ''}
+    ${displayData.pinned?'📌 ':''}${escapeHTML(truncateTitle(displayData.title))}
 </h3>
 <div class="time">${formatTime(post.date)}</div>
 <div class="comment-count">💬 ${countComments(post)}</div>
@@ -288,11 +292,11 @@ window.editPost=function(key){
     openPasswordModal("수정 비밀번호 확인", (pw)=>{
         if(pw === post.password || pw === MASTER_DELETE_CODE){
             const container=document.getElementById('postList');
-            // 수정 대기 중인 데이터가 있으면 그걸 불러오고, 없으면 현재 데이터 불러옴
+            // 관리자면 대기내역 수정, 아니면 현재내역 기준 수정
             const data = post.pendingUpdate || post;
             container.innerHTML=`
             <div class="card" style="cursor:default">
-            <h2>EDIT POST ${post.pendingUpdate ? '(승인 대기 중인 내용)' : ''}</h2>
+            <h2>EDIT POST ${post.pendingUpdate ? '(승인 대기중 내용)' : ''}</h2>
             <select id="e_category">
                 <option ${data.category==='잡담'?'selected':''}>잡담</option>
                 <option ${data.category==='정보'?'selected':''}>정보</option>
@@ -304,7 +308,7 @@ window.editPost=function(key){
             <label style="display:block;margin-top:10px; font-size:12px;">
                 <input type="checkbox" id="e_pin" style="width:auto" ${data.pinned?'checked':''}> 상단 고정 (관리자 전용)
             </label>
-            <input id="e_admin" placeholder="관리자 코드 (관리자 즉시 수정 시 필요)">
+            <input id="e_admin" placeholder="관리자 코드 (즉시 반영 시 필요)">
             <input id="e_title" value="${escapeHTML(data.title)}" placeholder="제목">
             <textarea id="e_content" style="height:200px" placeholder="내용">${escapeHTML(data.content)}</textarea>
             <input id="e_image" value="${data.image||''}" placeholder="이미지 URL">
@@ -315,7 +319,7 @@ window.editPost=function(key){
     });
 }
 
-// 수정 신청 처리
+// 수정 처리
 window.updatePost=function(key){
     const post = allPosts[key];
     const isPinned = document.getElementById('e_pin').checked;
@@ -330,14 +334,12 @@ window.updatePost=function(key){
         image: document.getElementById('e_image').value
     };
 
-    // 관리자 코드가 맞으면 즉시 수정
     if(adminInput === ADMIN_PIN_CODE){
         update(ref(db, 'posts/'+key), { ...editData, pendingUpdate: null }).then(()=>{
             alert("관리자 권한으로 즉시 수정되었습니다.");
             renderDetail(key);
         });
     } else {
-        // 일반 유저는 승인 대기 필드에 저장
         update(ref(db, 'posts/'+key+'/pendingUpdate'), editData).then(()=>{
             alert("수정 신청이 완료되었습니다. 관리자 승인 후 반영됩니다.");
             renderDetail(key);
@@ -349,22 +351,32 @@ window.updatePost=function(key){
 window.approveUpdate = function(key){
     const post = allPosts[key];
     if(!post.pendingUpdate) return;
-
-    update(ref(db, 'posts/'+key), {
-        ...post.pendingUpdate,
-        pendingUpdate: null // 승인 후 대기 데이터 삭제
-    }).then(()=>{
+    update(ref(db, 'posts/'+key), { ...post.pendingUpdate, pendingUpdate: null }).then(()=>{
         alert("수정 내용이 승인 및 반영되었습니다.");
         renderDetail(key);
     });
+}
+
+// 수정 반려 (대기 데이터 삭제)
+window.rejectUpdate = function(key){
+    if(confirm("수정 신청을 반려하시겠습니까? 신청된 내용은 삭제됩니다.")){
+        update(ref(db, 'posts/'+key), { pendingUpdate: null }).then(()=>{
+            alert("수정 신청이 반려되었습니다.");
+            renderDetail(key);
+        });
+    }
 }
 
 window.renderDetail = function(key){
 currentPostKey=key
 const post=allPosts[key]
 const container=document.getElementById('postList')
-let commentsHTML=""
 
+// 핵심: 관리자 모드일 경우 수정 대기내용을 보여줌
+const isPreview = isAdminView && post.pendingUpdate;
+const displayData = isPreview ? post.pendingUpdate : post;
+
+let commentsHTML=""
 if(post.comments){
 Object.entries(post.comments).forEach(([cid,c])=>{
 commentsHTML+=`
@@ -395,17 +407,21 @@ container.innerHTML=`
     <button class='action-btn' onclick="renderList()">← 목록으로</button>
     <div>
         ${(isAdminView && !post.approved) ? `<button class='action-btn' style="background:#2a442a" onclick="approvePost('${key}')">신규 승인</button>` : ''}
-        ${(isAdminView && post.pendingUpdate) ? `<button class='action-btn' style="background:#223344; border-color:#55aaff; color:#55aaff" onclick="approveUpdate('${key}')">수정 승인</button>` : ''}
+        ${(isAdminView && post.pendingUpdate) ? `
+            <button class='action-btn' style="background:#223344; border-color:#55aaff; color:#55aaff" onclick="approveUpdate('${key}')">수정 승인</button>
+            <button class='action-btn' style="border-color:#ff5555; color:#ff5555" onclick="rejectUpdate('${key}')">수정 반려</button>
+        ` : ''}
         <button class='action-btn' style="border-color:#2aff00; color:#9cff57" onclick="editPost('${key}')">글 수정</button>
         <button class='action-btn' style="border-color:#555; color:#888" onclick="deletePost('${key}','${post.password}')">글 삭제</button>
     </div>
 </div>
 <hr>
-${post.pendingUpdate ? `<div style="color:#55aaff; font-size:12px; margin-bottom:10px;">! 이 글은 현재 내용 수정을 신청하여 승인 대기 중입니다.</div>` : ''}
-<h2>${escapeHTML(post.title)}</h2>
-<div class='meta'>작성자: ${escapeHTML(post.nickname)} | ${formatTime(post.date)}</div>
-<p style="color: #d1d1d1; margin: 25px 0; line-height: 1.8; font-size:15px; white-space:pre-wrap;">${escapeHTML(post.content)}</p>
-${post.image?`<img src="${post.image}" class="post-image">`:""}
+${isPreview ? `<div style="background:#1a2233; color:#55aaff; padding:10px; border-radius:4px; font-size:12px; margin-bottom:15px; border:1px solid #55aaff;">⚠️ 현재 <b>수정된 내용</b>을 미리보고 있습니다. (승인 전까지 일반 유저는 이전 내용을 봅니다)</div>` : ''}
+${(!isAdminView && post.pendingUpdate) ? `<div style="color:#55aaff; font-size:12px; margin-bottom:10px;">! 이 글은 현재 내용 수정을 신청하여 승인 대기 중입니다.</div>` : ''}
+<h2>${displayData.pinned?'📌 ':''}${escapeHTML(displayData.title)}</h2>
+<div class='meta'>작성자: ${escapeHTML(post.nickname)} | 카테고리: ${displayData.category} | ${formatTime(post.date)}</div>
+<p style="color: #d1d1d1; margin: 25px 0; line-height: 1.8; font-size:15px; white-space:pre-wrap;">${escapeHTML(displayData.content)}</p>
+${displayData.image?`<img src="${displayData.image}" class="post-image">`:""}
 <h3 class="comment-section-title">Comments</h3>
 ${commentsHTML}
 <div style="background:#0a0d0a; padding:15px; border-radius:4px; margin-top:30px; border:1px solid #1a2a1a;">
