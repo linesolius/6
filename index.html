@@ -400,16 +400,16 @@ if(post.comments){
 Object.entries(post.comments).forEach(([cid,c])=>{
 commentsHTML+=`
 <div class='comment'>
-<b> ${escapeHTML(c.nickname)}</b>
+<b>ID: ${escapeHTML(c.nickname)}</b>
 <div class="comment-text">${escapeHTML(c.content)}</div>
 ${c.image?`<img src="${c.image}" class="comment-image">`:""}
 <div class="time">${formatTime(c.date)}</div>
-<button class="action-btn" onclick="toggleReply('${cid}')">답글</button>
+<button class="action-btn" onclick="toggleReply('${cid}')">회신</button>
 <button class="action-btn" style="opacity:0.5" onclick="deleteComment('${key}','${cid}','${c.password}')">삭제</button>
 <div id="replyBox-${cid}" style="display:none; margin-top:15px; border-top:1px dashed #444; padding-top:10px;">
-<input id="r_nick-${cid}" placeholder="호출명" style="width:48%"><input id="r_pass-${cid}" type="password" placeholder="암호" style="width:48%">
+<input id="r_nick-${cid}" placeholder="생존자 호출명(닉네임)" style="width:48%"><input id="r_pass-${cid}" type="password" placeholder="암호" style="width:48%">
 <textarea id="r_content-${cid}" placeholder="내용을 입력하세요"></textarea>
-<button class="action-btn" style="background:#555; color:#fff;" onclick="submitReply('${key}','${cid}')">답글 등록</button>
+<button class="action-btn" style="background:#555; color:#fff;" onclick="submitReply('${key}','${cid}')">회신하기</button>
 </div>`
 if(c.replies){
 Object.entries(c.replies).forEach(([rid,r])=>{
