@@ -401,7 +401,7 @@ Object.entries(post.comments).forEach(([cid,c])=>{
 commentsHTML+=`
 <div class='comment'>
 <b>ID: ${escapeHTML(c.nickname)}</b>
-<div class="comment-text">ID: ${escapeHTML(c.content)}</div>
+<div class="comment-text"> ${escapeHTML(c.content)}</div>
 ${c.image?`<img src="${c.image}" class="comment-image">`:""}
 <div class="time">${formatTime(c.date)}</div>
 <button class="action-btn" onclick="toggleReply('${cid}')">회신</button>
@@ -413,7 +413,7 @@ ${c.image?`<img src="${c.image}" class="comment-image">`:""}
 </div>`
 if(c.replies){
 Object.entries(c.replies).forEach(([rid,r])=>{
-commentsHTML+=`<div class='reply'><b>└ ${escapeHTML(r.nickname)}</b><div class="reply-text">${escapeHTML(r.content)}</div><div class="time">${formatTime(r.date)}</div><button class="action-btn" style="opacity:0.5; padding:2px 6px;" onclick="deleteReply('${key}','${cid}','${rid}','${r.password}')">삭제</button></div>`
+commentsHTML+=`<div class='reply'><b>└ ID: ${escapeHTML(r.nickname)}</b><div class="reply-text">${escapeHTML(r.content)}</div><div class="time">${formatTime(r.date)}</div><button class="action-btn" style="opacity:0.5; padding:2px 6px;" onclick="deleteReply('${key}','${cid}','${rid}','${r.password}')">삭제</button></div>`
 })
 }
 commentsHTML+="</div>"
