@@ -401,7 +401,7 @@ Object.entries(post.comments).forEach(([cid,c])=>{
 commentsHTML+=`
 <div class='comment'>
 <b>ID: ${escapeHTML(c.nickname)}</b>
-<div class="comment-text">${escapeHTML(c.content)}</div>
+<div class="comment-text">ID: ${escapeHTML(c.content)}</div>
 ${c.image?`<img src="${c.image}" class="comment-image">`:""}
 <div class="time">${formatTime(c.date)}</div>
 <button class="action-btn" onclick="toggleReply('${cid}')">회신</button>
@@ -423,7 +423,7 @@ commentsHTML+="</div>"
 container.innerHTML=`
 <div class='card' style="cursor:default">
 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-    <button class='action-btn' onclick="renderList()">← 복귀</button>
+    <button class='action-btn' onclick="renderList()">← 목록</button>
     <div>
         ${(isAdminView && !post.approved) ? `<button class='action-btn' style="background:#334433; color:#9cff57;" onclick="approvePost('${key}')">신규 승인</button>` : ''}
         ${(isAdminView && post.pendingUpdate) ? `
