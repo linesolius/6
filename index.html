@@ -82,7 +82,7 @@ footer{text-align:center; padding:60px; color:#555; font-size:12px; letter-spaci
 <div class="container" id="postList"></div>
 
 <footer>
-    © <span id="adminClick" class="admin-trigger">2033</span> CAMPUS SURVIVAL NETWORK
+    <span id="adminTrigger" class="admin-trigger">©</span> <span id="adminClick" class="admin-trigger">2033</span> CAMPUS SURVIVAL NETWORK
 </footer>
 
 <div id="passwordModal" class="modal">
@@ -124,31 +124,46 @@ let isAdminView = false;
 const POSTS_PER_PAGE = 10;
 
 // 관리자 모드 토글 함수
-function toggleAdminMode() {
+function toggleAdminMode(autoWrite = false) {
     openPasswordModal("ADMIN ACCESS", (pw)=>{
         if(pw === ADMIN_PIN_CODE){
-            isAdminView = !isAdminView;
-            alert(isAdminView ? "관리자 권한 획득: 데이터 제어 및 승인 권한이 부여됩니다." : "관리자 모드 해제");
-            renderList();
+            isAdminView = true;
+            alert("관리자 권한 획득: 데이터 제어 및 공지 작성 권한이 부여됩니다.");
+            if(autoWrite) {
+                renderAdminWrite();
+            } else {
+                renderList();
+            }
         } else { alert("ACCESS DENIED"); }
     });
 }
 
 // 1. 단축키 감지
 window.addEventListener('keydown', function(e) {
-    // Ctrl + Shift + A : 관리자 모드 토글
     if (e.ctrlKey && e.shiftKey && e.code === 'KeyA') {
         e.preventDefault();
         toggleAdminMode();
     }
-    // Ctrl + Shift + ' : 관리자 게시글 작성창 호출
     if (e.ctrlKey && e.shiftKey && e.code === 'Quote') {
         e.preventDefault();
         renderAdminWrite();
     }
 });
 
-// 2. 5번 클릭 감지
+// 2. 하단 © 5번 클릭 감지 (공지 작성창 바로 띄우기)
+let symbolClickCount = 0;
+let symbolClickTimer = null;
+document.getElementById('adminTrigger').addEventListener('click', function() {
+    symbolClickCount++;
+    clearTimeout(symbolClickTimer);
+    symbolClickTimer = setTimeout(() => { symbolClickCount = 0; }, 3000);
+    if (symbolClickCount >= 5) {
+        symbolClickCount = 0;
+        toggleAdminMode(true); // true 인자를 주어 인증 후 바로 작성창 렌더링
+    }
+});
+
+// 기존 2033 클릭 감지 (단순 관리자 뷰 토글)
 let clickCount = 0;
 let clickTimer = null;
 document.getElementById('adminClick').addEventListener('click', function() {
@@ -157,7 +172,7 @@ document.getElementById('adminClick').addEventListener('click', function() {
     clickTimer = setTimeout(() => { clickCount = 0; }, 3000);
     if (clickCount >= 5) {
         clickCount = 0;
-        toggleAdminMode();
+        toggleAdminMode(false);
     }
 });
 
@@ -268,7 +283,7 @@ if(totalPosts > 0) {
 }
 }
 
-// 일반 사용자용 작성창 (관리자용 옵션 제거)
+// 일반 사용자용 작성창
 window.renderWrite=function(){
 const container=document.getElementById('postList')
 container.innerHTML=`
@@ -289,23 +304,23 @@ container.innerHTML=`
 `
 }
 
-// 관리자용 전용 작성창 (Ctrl+Shift+' 호출 전용)
+// 관리자용 공지 작성창
 window.renderAdminWrite=function(){
 const container=document.getElementById('postList')
 container.innerHTML=`
 <div class="card" style="cursor:default; border-left-color: #ff8c00;">
-<h2 style="color:#ff8c00">ADMIN ENCRYPTED SIGNAL</h2>
+<h2 style="color:#ff8c00">ADMIN ENCRYPTED SIGNAL (NOTICE)</h2>
 <select id="w_category">
 <option>공지</option><option>잡담</option><option>정보</option><option>질문</option><option>거래</option><option>도움</option>
 </select>
 <label style="display:block;margin-top:10px; font-size:12px;">
-<input type="checkbox" id="w_pin" style="width:auto; margin-top:0;"> 최상단 고정 (관리자 전용)
+<input type="checkbox" id="w_pin" style="width:auto; margin-top:0;" checked> 최상단 고정 (관리자 전용)
 </label>
-<input id="w_admin" placeholder="관리자 보안 코드 입력 필수">
+<input id="w_admin" placeholder="관리자 보안 코드를 입력하세요" type="password">
 <input id="w_nick" value="ADMIN" placeholder="생존자 호출명(닉네임)">
 <input id="w_pass" type="password" placeholder="기록 암호(비밀번호)">
 <input id="w_title" placeholder="제목">
-<textarea id="w_content" placeholder="공지 및 관리용 내용을 입력하십시오..." style="height:200px"></textarea>
+<textarea id="w_content" placeholder="공지 사항을 입력하십시오..." style="height:200px"></textarea>
 <input id="w_image" placeholder="첨부 이미지 URL (선택)">
 <button class="action-btn" style="background:#ff8c00; color:#000; border:none; font-weight:bold;" onclick="submitPost(true)">마스터 권한 송신</button>
 <button class="action-btn" onclick="renderList()">취소</button>
@@ -321,15 +336,12 @@ const isPinned = pinElement ? pinElement.checked : false;
 const category = document.getElementById('w_category').value;
 const adminInput = adminElement ? adminElement.value : "";
 
-// 승인 여부 결정: 카테고리가 공지거나 고정글인 경우 반드시 관리자 코드가 맞아야 함
 let shouldApprove = (category.includes("공지") || isPinned) && adminInput === ADMIN_PIN_CODE;
 
-// 만약 관리자 전용 기능을 쓰려는데 코드가 틀렸다면 차단
 if((category.includes("공지") || isPinned) && adminInput !== ADMIN_PIN_CODE){
     alert("권한이 거부되었습니다. 보안 코드를 확인하십시오."); return;
 }
 
-// 일반 게시글인데 관리자 코드를 넣은 경우에도 즉시 승인 처리
 if(!shouldApprove && adminInput === ADMIN_PIN_CODE) {
     shouldApprove = true;
 }
