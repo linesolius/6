@@ -65,7 +65,7 @@ footer{text-align:center; padding:60px; color:#555; font-size:12px; letter-spaci
 <header>
 <div class="topbar">
 <h1>Campus Survival</h1>
-<button class="write-btn" onclick="renderWrite()">포스트 작성하기</button>
+<button class="write-btn" onclick="renderWrite()">신호 발송하기</button>
 </div>
 
 <nav>
@@ -265,7 +265,7 @@ window.renderWrite=function(){
 const container=document.getElementById('postList')
 container.innerHTML=`
 <div class="card" style="cursor:default">
-<h2>NEW REPORT</h2>
+<h2>NEW SIGNAL</h2>
 <select id="w_category">
 <option>잡담</option><option>정보</option><option>질문</option>
 <option>거래</option><option>도움</option>
