@@ -65,17 +65,17 @@ footer{text-align:center; padding:60px; color:#555; font-size:12px; letter-spaci
 <header>
 <div class="topbar">
 <h1>Campus Survival</h1>
-<button class="write-btn" onclick="renderWrite()">생존 보고하기</button>
+<button class="write-btn" onclick="renderWrite()">포스트 작성하기</button>
 </div>
 
 <nav>
 <button onclick="filterCategory('all')">전체</button>
-<button onclick="filterCategory('공지')">긴급</button>
-<button onclick="filterCategory('잡담')">무전</button>
-<button onclick="filterCategory('정보')">기록</button>
-<button onclick="filterCategory('질문')">요청</button>
-<button onclick="filterCategory('거래')">물자</button>
-<button onclick="filterCategory('도움')">구조</button>
+<button onclick="filterCategory('공지')">공지</button>
+<button onclick="filterCategory('잡담')">잡담</button>
+<button onclick="filterCategory('정보')">정보</button>
+<button onclick="filterCategory('질문')">질문</button>
+<button onclick="filterCategory('거래')">거래</button>
+<button onclick="filterCategory('도움')">도움</button>
 </nav>
 </header>
 
@@ -275,8 +275,8 @@ container.innerHTML=`
 <input type="checkbox" id="w_pin" style="width:auto; margin-top:0;"> 최상단 고정 (관리자용)
 </label>
 <input id="w_admin" placeholder="관리자 보안 코드">
-<input id="w_nick" placeholder="생존자 호출명">
-<input id="w_pass" type="password" placeholder="기록 암호">
+<input id="w_nick" placeholder="생존자 호출명(닉네임)">
+<input id="w_pass" type="password" placeholder="기록 암호(비밀번호)">
 <input id="w_title" placeholder="제목">
 <textarea id="w_content" placeholder="상세 내용을 입력하십시오..." style="height:200px"></textarea>
 <input id="w_image" placeholder="첨부 이미지 URL (선택)">
@@ -400,7 +400,7 @@ if(post.comments){
 Object.entries(post.comments).forEach(([cid,c])=>{
 commentsHTML+=`
 <div class='comment'>
-<b>ID: ${escapeHTML(c.nickname)}</b>
+<b> ${escapeHTML(c.nickname)}</b>
 <div class="comment-text">${escapeHTML(c.content)}</div>
 ${c.image?`<img src="${c.image}" class="comment-image">`:""}
 <div class="time">${formatTime(c.date)}</div>
@@ -438,7 +438,7 @@ container.innerHTML=`
 ${isPreview ? `<div style="background:#112244; color:#44aaff; padding:10px; border-radius:4px; font-size:12px; margin-bottom:15px; border:1px solid #44aaff;">[LOG] 데이터 수정본 프리뷰 모드입니다.</div>` : ''}
 ${(!isAdminView && post.pendingUpdate) ? `<div style="color:#44aaff; font-size:12px; margin-bottom:10px;">* 이 기록은 현재 데이터 갱신을 위해 검토 중입니다.</div>` : ''}
 <h2>${displayData.pinned?'⚠️ ':''}${escapeHTML(displayData.title)}</h2>
-<div class='meta'>SOURCE: ${escapeHTML(post.nickname)} | TAG: ${displayData.category} | ${formatTime(post.date)}</div>
+<div class='meta'>ID: ${escapeHTML(post.nickname)} | TAG: ${displayData.category} | ${formatTime(post.date)}</div>
 <p style="color: #eee; margin: 25px 0; line-height: 1.8; font-size:15px; white-space:pre-wrap;">${escapeHTML(displayData.content)}</p>
 ${displayData.image?`<img src="${displayData.image}" class="post-image">`:""}
 <h3 class="comment-section-title">RADIO LOGS</h3>
@@ -446,9 +446,9 @@ ${commentsHTML}
 <div style="background:#111; padding:20px; margin-top:30px; border:1px solid #333;">
     <h3 style="font-size:14px; margin-bottom:10px; color:#ff8c00;">무전 남기기</h3>
     <div style="display:flex; justify-content:space-between;">
-        <input id='c_nick' placeholder='호출명' style="width:49%"><input id='c_pass' type='password' placeholder='암호' style="width:49%">
+        <input id='c_nick' placeholder='생존자 호출명(닉네임)' style="width:49%"><input id='c_pass' type='password' placeholder='암호' style="width:49%">
     </div>
-    <textarea id='c_content' placeholder='응답하라...' style="height:80px"></textarea>
+    <textarea id='c_content' placeholder='내용을 입력해주세요' style="height:80px"></textarea>
     <input id='c_image' placeholder='이미지 URL (선택)'>
     <button class='action-btn' style="width:100%; padding:12px; margin-top:10px; background:#ff8c00; color:#000; border:none; font-weight:bold;" onclick="submitComment('${key}')">무전 송신</button>
 </div>
@@ -476,21 +476,21 @@ window.submitReply=function(postKey,commentKey){
 }
 
 window.deletePost=function(key,password){
-    openPasswordModal("데이터 말소 인증", (input)=>{
+    openPasswordModal(" 삭제 인증", (input)=>{
         if(input===password || input===MASTER_DELETE_CODE){ remove(ref(db,'posts/'+key)).then(()=>{ currentPostKey=null; renderList(); }) }
         else{ alert("인증 실패"); }
     })
 }
 
 window.deleteComment=function(postKey,commentKey,password){
-    openPasswordModal("무전 삭제 인증", (input)=>{
+    openPasswordModal("무전 기록 삭제 인증", (input)=>{
         if(input===password || input===MASTER_DELETE_CODE){ remove(ref(db,'posts/'+postKey+'/comments/'+commentKey)).then(()=>{ renderDetail(postKey) }) }
         else{ alert("인증 실패"); }
     })
 }
 
 window.deleteReply=function(postKey,commentKey,replyKey,password){
-    openPasswordModal("답글 삭제 인증", (input)=>{
+    openPasswordModal("회신 기록 삭제 인증", (input)=>{
         if(input===password || input===MASTER_DELETE_CODE){ remove(ref(db,'posts/'+postKey+'/comments/'+commentKey+'/replies/'+replyKey)).then(()=>{ renderDetail(postKey) }) }
         else{ alert("인증 실패"); }
     })
