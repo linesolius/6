@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 export default function AbnormalCommunity() {
   const [selectedPost, setSelectedPost] = useState(null);
   const [menu, setMenu] = useState("전체");
-  const [notification, setNotification] = useState("접속 안정화 완료");
+  const [notification, setNotification] = useState("로컬 시스템 안정화 완료");
   const [search, setSearch] = useState("");
   const [likedPosts, setLikedPosts] = useState([]);
   const [isWriting, setIsWriting] = useState(false);
@@ -11,58 +11,38 @@ export default function AbnormalCommunity() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
 
-  const [posts, setPosts] = useState([]);
+  // 초깃값을 LocalStorage에서 가져오거나 빈 배열로 설정
+  const [posts, setPosts] = useState(() => {
+    const saved = localStorage.getItem("anomaly_posts");
+    return saved ? JSON.parse(saved) : [
+      {
+        id: 1,
+        title: "징후를 목격하신 분이 있나요?",
+        content: "어젯밤 집 앞 가로등이 붉은색으로 깜빡이는 것을 보았습니다. 다들 조심하세요.",
+        author: "익명",
+        comments: 0,
+        tag: "정보",
+        date: new Date().toISOString()
+      }
+    ];
+  });
   
-  // 페이징 처리를 위한 상태
   const [currentPage, setCurrentPage] = useState(1);
   const POSTS_PER_PAGE = 10;
 
-  // 1. 구글 배포 후 받은 웹 앱 URL을 여기에 붙여넣으세요!
-  const API_URL = "";
+  const notices = ["서버 비연동 상태 모드 활성화", "이상 데이터 감지 시 즉시 브라우저를 새로고침하십시오."];
 
-  const notices = [];
-
-  // 데이터 불러오기 함수
-  const fetchPosts = async () => {
-    try {
-      if (!API_URL) {
-        console.warn("Google Script URL이 설정되지 않았습니다.");
-        return;
-      }
-      const response = await fetch(API_URL);
-
-      if (!response.ok) {
-        throw new Error("응답 실패");
-      }
-
-      const data = await response.json();
-      setPosts([...data].reverse());
-    } catch (error) {
-      console.error("게시글 로딩 실패", error);
-    }
-  };
-
-  // 5초마다 실시간 폴링 데이터 동기화
+  // posts가 변경될 때마다 LocalStorage에 세이브
   useEffect(() => {
-    if (API_URL) {
-      fetchPosts();
-      
-      const interval = setInterval(() => {
-        fetchPosts();
-      }, 5000);
+    localStorage.setItem("anomaly_posts", JSON.stringify(posts));
+  }, [posts]);
 
-      return () => clearInterval(interval);
-    }
-  }, [API_URL]);
-
-  // 카테고리나 검색어가 바뀌면 페이지를 1페이지로 초기화
   useEffect(() => {
     setCurrentPage(1);
   }, [menu, search]);
 
   const menus = ["전체", "정보", "도움", "잡담", "거래", "전투"];
 
-  // 필터링 적용된 전체 게시글
   const filteredPosts = useMemo(() => {
     return posts.filter((post) => {
       const matchSearch = (post.title || "")
@@ -75,18 +55,15 @@ export default function AbnormalCommunity() {
     });
   }, [posts, search, menu]);
 
-  // 10개씩 자르기 (페이지네이션 적용된 게시글)
   const currentPosts = useMemo(() => {
     const indexOfLastPost = currentPage * POSTS_PER_PAGE;
     const indexOfFirstPost = indexOfLastPost - POSTS_PER_PAGE;
     return filteredPosts.slice(indexOfFirstPost, indexOfLastPost);
   }, [filteredPosts, currentPage]);
   
-  // 총 페이지 수 계산
   const totalPages = Math.ceil(filteredPosts.length / POSTS_PER_PAGE);
 
-  // 새 글 등록 로직 (시간 데이터 추가 포함)
-  const handleCreatePost = async () => {
+  const handleCreatePost = () => {
     if (!title.trim() || !content.trim()) {
       setNotification("제목과 내용을 입력하세요.");
       return;
@@ -99,28 +76,15 @@ export default function AbnormalCommunity() {
       author: "익명",
       comments: 0,
       tag: menu === "전체" ? "잡담" : menu,
-      date: new Date().toISOString() // ◀ 시간 데이터 생성
+      date: new Date().toISOString()
     };
 
+    // 로컬 상태에 바로 반영 (최신글이 맨 위로)
     setPosts((prev) => [newPost, ...prev]);
-
-    try {
-      if (!API_URL) return;
-
-      await fetch(API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "text/plain;charset=utf-8"
-        },
-        body: JSON.stringify(newPost)
-      });
-    } catch (error) {
-      console.error("게시글 저장 실패", error);
-    }
 
     setTitle("");
     setContent("");
-    setNotification("게시글이 등록되었습니다.");
+    setNotification("게시글이 로컬 저장소에 등록되었습니다.");
     setIsWriting(false);
     setCurrentPage(1);
   };
@@ -133,7 +97,7 @@ export default function AbnormalCommunity() {
             <h1 className="text-2xl font-black tracking-tight text-red-500">
               anomaly:thread
             </h1>
-            <p className="text-xs text-zinc-500">비인가 이상현상 커뮤니티</p>
+            <p className="text-xs text-zinc-500">비인가 이상현상 커뮤니티 (로컬)</p>
           </div>
 
           <div className="flex gap-3 items-center">
@@ -184,9 +148,6 @@ export default function AbnormalCommunity() {
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 shadow-lg">
             <h2 className="font-bold text-lg mb-3 text-red-400">공지</h2>
             <div className="space-y-3 text-sm">
-              {notices.length === 0 && (
-                <div className="text-zinc-500 text-sm">등록된 공지가 없습니다.</div>
-              )}
               {notices.map((item, idx) => (
                 <div
                   key={idx}
@@ -224,7 +185,7 @@ export default function AbnormalCommunity() {
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-lg flex flex-col min-h-[500px]">
             <div className="flex items-center justify-between border-b border-zinc-800 px-5 py-4">
               <h2 className="font-bold text-lg">게시글</h2>
-              <div className="text-xs text-zinc-500">실시간 연동 중</div>
+              <div className="text-xs text-zinc-500 font-mono text-green-400">LOCAL SECURE</div>
             </div>
 
             <div className="flex-1">
@@ -257,7 +218,6 @@ export default function AbnormalCommunity() {
                     <div className="flex items-center gap-3">
                       <span>{post.author}</span>
                       
-                      {/* 목록 시간 표시 부분 */}
                       {post.date && (
                         <span className="text-zinc-600">
                           {new Date(post.date).toLocaleTimeString("ko-KR", {
@@ -293,7 +253,6 @@ export default function AbnormalCommunity() {
               ))}
             </div>
 
-            {/* 페이지네이션 하단 바 */}
             {totalPages > 0 && (
               <div className="flex items-center justify-center gap-4 py-4 border-t border-zinc-800 bg-zinc-950/50">
                 <button
@@ -308,7 +267,7 @@ export default function AbnormalCommunity() {
                 </div>
                 <button
                   disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage((p) => p + 1)}
+                  onClick={() => setCurrentPage((p) => p - 1)}
                   className="text-xs px-3 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 disabled:hover:bg-zinc-800 transition"
                 >
                   다음
@@ -322,14 +281,13 @@ export default function AbnormalCommunity() {
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 shadow-lg sticky top-24">
             <h2 className="font-bold text-lg text-red-400 mb-3">프로토콜 상태</h2>
             <div className="text-sm text-zinc-400 leading-relaxed space-y-2">
-              <p>스프레드시트 데이터베이스와 5초 주기로 보안 동기화 중입니다.</p>
-              <p className="text-xs text-zinc-500">10개 단위 열람 프로토콜 활성화 됨.</p>
+              <p>현재 로컬 브라우저 보안 저장소(LocalStorage)에 기록 중입니다.</p>
+              <p className="text-xs text-zinc-500">외부 통신망 차단됨.</p>
             </div>
           </div>
         </aside>
       </main>
 
-      {/* 게시글 내용 상세 모달 (시간 노출 추가) */}
       {selectedPost && (
         <div className="fixed inset-0 z-[90] bg-zinc-950 overflow-y-auto animate-in fade-in duration-300">
           <div className="max-w-4xl mx-auto min-h-screen px-4 py-8">
@@ -369,7 +327,6 @@ export default function AbnormalCommunity() {
         </div>
       )}
 
-      {/* 글쓰기 팝업 모달 */}
       {isWriting && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
           <div className="w-full max-w-2xl bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-2xl">
