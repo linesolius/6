@@ -1,560 +1,402 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Campus Survival</title>
+import { useEffect, useMemo, useState } from "react";
 
-<style>
-/* 1. 전체 베이스: 황폐해진 대학교/서바이벌 컨셉 */
-*{margin:0;padding:0;box-sizing:border-box;font-family:'Courier New',serif}
-body{background:#1a1a1a;color:#d4d4d4; line-height:1.5; background-image: radial-gradient(#262626 1px, transparent 1px); background-size: 20px 20px;} 
-header{background:#252525;padding:20px 40px;border-bottom:3px solid #ff8c00; box-shadow: 0 4px 10px rgba(0,0,0,0.5);}
-.topbar{display:flex;justify-content:space-between;align-items:center}
-h1{color:#ff8c00; text-transform: uppercase; letter-spacing: 2px; text-shadow: 2px 2px #000;}
-nav{margin-top:15px}
-nav button{background:#2a2a2a;border:1px solid #444;color:#bbb;padding:6px 14px;margin-right:6px;cursor:pointer; transition: 0.2s;}
-nav button:hover{background:#ff8c00; color:#000; border-color:#ff8c00;}
-.write-btn{background:#ff8c00;border:none;color:#000;padding:10px 18px;cursor:pointer; font-weight:bold; clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%);}
-.container{max-width:1000px;margin:40px auto;padding:0 20px}
+export default function AbnormalCommunity() {
+  const [selectedPost, setSelectedPost] = useState(null);
+  const [menu, setMenu] = useState("전체");
+  const [notification, setNotification] = useState("접속 안정화 완료");
+  const [search, setSearch] = useState("");
+  const [likedPosts, setLikedPosts] = useState([]);
+  const [isWriting, setIsWriting] = useState(false);
 
-/* 2. 게시글 카드 및 제목 */
-.card{background:#222;padding:25px;margin-bottom:20px;border:1px solid #333; border-left: 5px solid #444; cursor:pointer; position: relative;}
-.card:hover{border-left-color: #ff8c00; background: #262626;}
-.meta{font-size:12px;color:#888;margin-bottom:10px; text-transform: uppercase;}
-.card h2 { color: #eee; margin-bottom: 15px; font-size: 1.5rem; } 
-.card h3 { color: #ddd; font-size: 1.2rem; } 
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
 
-/* 배지 스타일 */
-.badge { padding: 2px 8px; border-radius: 0px; font-size: 11px; margin-right: 5px; border: 1px solid; font-weight: bold;}
-.pending-badge { background: #441111; color: #ff4444; border-color: #ff4444; }
-.update-badge { background: #112244; color: #44aaff; border-color: #44aaff; }
+  const [posts, setPosts] = useState([]);
 
-/* 3. 댓글 가독성 개선 */
-.comment-section-title { margin: 30px 0 15px; color: #ff8c00; font-size: 1.1rem; border-bottom: 2px solid #333; padding-bottom: 5px; text-transform: uppercase;}
-.comment { margin-top: 15px; padding: 15px; background: #1e1e1e; border: 1px solid #333; position: relative;}
-.comment b { color: #ff8c00; font-size: 14px; display: block; margin-bottom: 5px; }
-.comment .comment-text { color: #ccc; font-size: 14px; white-space: pre-wrap; margin-bottom: 8px; }
+  // Google Apps Script Web App URL
+  // Google Apps Script 웹앱 URL 입력
+  // 예: https://script.google.com/macros/s/xxxxx/exec
+  const API_URL = "";
 
-.reply { margin-left: 25px; margin-top: 10px; padding: 12px; background: #171717; border-left: 2px solid #ff8c00; }
-.reply b { color: #ffa500; font-size: 13px; }
-.reply .reply-text { color: #aaa; font-size: 13px; margin-top: 4px; }
+  const notices = [];
 
-/* 4. 기타 UI 요소 */
-textarea,input,select{width:100%;margin-top:10px;background:#111;border:1px solid #444;color:#eee;padding:12px; outline: none;}
-textarea:focus,input:focus{border-color: #ff8c00;}
-.action-btn{background:#333;border:1px solid #555;color:#ccc;padding:8px 14px;margin:8px 4px 0 0;cursor:pointer; font-size: 12px; transition: 0.2s;}
-.action-btn:hover{background:#444; color:#fff;}
-hr{margin:25px 0;border:0;border-top:1px solid #333}
-.time{font-size:11px;color:#666;margin-top:5px;}
-.comment-count{font-size:12px;color:#ff8c00;margin-top:6px; font-weight: bold;}
-.post-image{max-width:100%;margin-top:15px;border: 1px solid #333; filter: grayscale(30%);}
-.comment-image{max-width:200px;margin-top:8px; border: 1px solid #333;}
+  useEffect(() => {
+    if (API_URL) {
+      fetchPosts();
+    }
+  }, []);
 
-.modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);display:none;align-items:center;justify-content:center;z-index:999;}
-.modal-box{background:#222;padding:30px;border:2px solid #ff8c00;width:320px; box-shadow: 0 0 20px rgba(255,140,0,0.2);}
-.pagination {text-align:center; margin-top:30px;}
-.page-info {margin:0 15px; font-weight:bold; color:#ff8c00;}
-footer{text-align:center; padding:60px; color:#555; font-size:12px; letter-spacing: 1px;}
-.admin-trigger{cursor: pointer; user-select: none;}
-</style>
-</head>
+  const fetchPosts = async () => {
+    try {
+      if (!API_URL) {
+        console.warn("Google Script URL이 설정되지 않았습니다.");
+        return;
+      }
+      const response = await fetch(API_URL);
 
-<body>
+      if (!response.ok) {
+        throw new Error("응답 실패");
+      }
 
-<header>
-<div class="topbar">
-<h1>Campus Survival</h1>
-<button class="write-btn" onclick="renderWrite()">신호 발송하기</button>
-</div>
+      const data = await response.json();
 
-<nav>
-<button onclick="filterCategory('all')">전체</button>
-<button onclick="filterCategory('공지')">공지</button>
-<button onclick="filterCategory('잡담')">잡담</button>
-<button onclick="filterCategory('정보')">정보</button>
-<button onclick="filterCategory('질문')">질문</button>
-<button onclick="filterCategory('거래')">거래</button>
-<button onclick="filterCategory('도움')">도움</button>
-</nav>
-</header>
+      setPosts(data.reverse());
+    } catch (error) {
+      console.error("게시글 로딩 실패", error);
+      setNotification("스프레드시트 연결 실패");
+    }
+  };
 
-<div class="container" id="postList"></div>
+  const menus = ["전체", "정보", "도움", "잡담", "거래", "전투"];
 
-<footer>
-    <span id="adminTrigger" class="admin-trigger">©</span> <span id="adminClick" class="admin-trigger">2033</span> CAMPUS SURVIVAL NETWORK
-</footer>
+  const filteredPosts = useMemo(() => {
+    return posts.filter((post) => {
+      const matchSearch = post.title
+        .toLowerCase()
+        .includes(search.toLowerCase());
 
-<div id="passwordModal" class="modal">
-<div class="modal-box">
-<h3 id="modalTitle">보안 코드 입력</h3>
-<input type="password" id="pwInput">
-<button class="action-btn" id="pwConfirm" style="background:#ff8c00; color:#000; border:none; font-weight:bold;">확인</button>
-<button class="action-btn" onclick="document.getElementById('passwordModal').style.display='none'">취소</button>
-</div>
-</div>
+      const matchMenu = menu === "전체" || post.tag === menu;
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-
-const MASTER_DELETE_CODE="porygon2007"
-const ADMIN_PIN_CODE="torso1989"
-
-const firebaseConfig={
-    apiKey: "AIzaSyC2XZVXqqhllM61A5_HpNgtPaPL2dU_jPA",
-    authDomain: "cam-b2178.firebaseapp.com",
-    databaseURL: "https://cam-b2178-default-rtdb.firebaseio.com",
-    projectId: "cam-b2178",
-    storageBucket: "cam-b2178.firebasestorage.app",
-    messagingSenderId: "157258413288",
-    appId: "1:157258413288:web:cf051458ae8d4d0bbc855d",
-    measurementId: "G-CVFLHBDVCJ"
-}
-
-const app=initializeApp(firebaseConfig)
-const db=getDatabase(app)
-const postsRef=ref(db,'posts')
-
-let allPosts={}
-let currentPostKey=null
-let currentCategory="all"
-let currentPage = 1;
-let isAdminView = false;
-const POSTS_PER_PAGE = 10;
-
-// 관리자 모드 토글 함수
-function toggleAdminMode(autoWrite = false) {
-    openPasswordModal("ADMIN ACCESS", (pw)=>{
-        if(pw === ADMIN_PIN_CODE){
-            isAdminView = true;
-            alert("관리자 권한 획득: 데이터 제어 및 공지 작성 권한이 부여됩니다.");
-            if(autoWrite) {
-                renderAdminWrite();
-            } else {
-                renderList();
-            }
-        } else { alert("ACCESS DENIED"); }
+      return matchSearch && matchMenu;
     });
-}
+  }, [posts, search, menu]);
 
-// 1. 단축키 감지
-window.addEventListener('keydown', function(e) {
-    if (e.ctrlKey && e.shiftKey && e.code === 'KeyA') {
-        e.preventDefault();
-        toggleAdminMode();
+  const handleCreatePost = async () => {
+    if (!title.trim() || !content.trim()) {
+      setNotification("제목과 내용을 입력하세요.");
+      return;
     }
-    if (e.ctrlKey && e.shiftKey && e.code === 'Quote') {
-        e.preventDefault();
-        renderAdminWrite();
-    }
-});
 
-// 2. 하단 © 5번 클릭 감지 (공지 작성창 바로 띄우기)
-let symbolClickCount = 0;
-let symbolClickTimer = null;
-document.getElementById('adminTrigger').addEventListener('click', function() {
-    symbolClickCount++;
-    clearTimeout(symbolClickTimer);
-    symbolClickTimer = setTimeout(() => { symbolClickCount = 0; }, 3000);
-    if (symbolClickCount >= 5) {
-        symbolClickCount = 0;
-        toggleAdminMode(true); // true 인자를 주어 인증 후 바로 작성창 렌더링
-    }
-});
-
-// 기존 2033 클릭 감지 (단순 관리자 뷰 토글)
-let clickCount = 0;
-let clickTimer = null;
-document.getElementById('adminClick').addEventListener('click', function() {
-    clickCount++;
-    clearTimeout(clickTimer);
-    clickTimer = setTimeout(() => { clickCount = 0; }, 3000);
-    if (clickCount >= 5) {
-        clickCount = 0;
-        toggleAdminMode(false);
-    }
-});
-
-function truncateTitle(title){
-if(title.length>15){ return title.slice(0,15)+"..." }
-return title
-}
-
-function openPasswordModal(title, callback){
-document.getElementById("modalTitle").innerText = title;
-const modal=document.getElementById("passwordModal")
-modal.style.display="flex"
-document.getElementById("pwConfirm").onclick=function(){
-const pw=document.getElementById("pwInput").value
-modal.style.display="none"
-document.getElementById("pwInput").value=""
-callback(pw)
-}
-}
-
-onValue(postsRef,(snap)=>{
-allPosts=snap.val()||{}
-if(currentPostKey){renderDetail(currentPostKey)}else{renderList()}
-})
-
-function countComments(post){
-let count=0
-if(!post.comments) return 0
-Object.values(post.comments).forEach(c=>{
-count++
-if(c.replies) count+=Object.keys(c.replies).length
-})
-return count
-}
-
-window.filterCategory=function(category){
-currentCategory=category; currentPage=1; renderList()
-}
-
-window.changePage=function(direction){
-  currentPage += direction; renderList();
-}
-
-window.renderList=function(){
-currentPostKey=null
-const container=document.getElementById('postList')
-container.innerHTML=''
-
-let postsArray=Object.entries(allPosts)
-
-postsArray=postsArray.filter(([k,p])=>{
-    if(!isAdminView && p.approved !== true) return false;
-    if(p.pinned === true) return true; 
-    if(currentCategory==="all") return true
-    return p.category===currentCategory
-})
-
-postsArray.sort((a,b)=>{
-if(a[1].pinned&&!b[1].pinned)return -1
-if(!a[1].pinned&&b[1].pinned)return 1
-return b[1].date-a[1].date
-})
-
-if(isAdminView) {
-    const info = document.createElement('div');
-    info.style.padding="10px"; info.style.background="#112244"; info.style.color="#44aaff"; info.style.marginBottom="20px"; info.style.fontSize="12px"; info.style.border="1px solid #44aaff";
-    info.innerHTML = "<strong>[ADMIN OVERRIDE]</strong> 수정 신청된 데이터의 프리뷰 및 승인 권한이 활성화되었습니다.";
-    container.appendChild(info);
-}
-
-const totalPosts = postsArray.length;
-const totalPages = Math.ceil(totalPosts / POSTS_PER_PAGE) || 1;
-if(currentPage > totalPages) currentPage = totalPages;
-
-const startIndex = (currentPage - 1) * POSTS_PER_PAGE;
-const paginatedPosts = postsArray.slice(startIndex, startIndex + POSTS_PER_PAGE);
-
-paginatedPosts.forEach(([key,post])=>{
-const card=document.createElement('div')
-card.className='card'
-if(post.pinned) card.style.borderLeftColor = "#ff8c00";
-
-const displayData = (isAdminView && post.pendingUpdate) ? post.pendingUpdate : post;
-
-card.onclick=()=>renderDetail(key)
-card.innerHTML=`
-<div class='meta'>[${displayData.category}] ${escapeHTML(post.nickname)}</div>
-<h3>
-    ${isAdminView && !post.approved ? '<span class="badge pending-badge">WAITING</span>' : ''}
-    ${isAdminView && post.pendingUpdate ? '<span class="badge update-badge">EDIT PREVIEW</span>' : ''}
-    ${displayData.pinned?'⚠️ ':''}${escapeHTML(truncateTitle(displayData.title))}
-</h3>
-<div class="time">${formatTime(post.date)}</div>
-<div class="comment-count">REPLY: ${countComments(post)}</div>
-`
-container.appendChild(card)
-})
-
-if(totalPosts > 0) {
-  const pDiv = document.createElement('div');
-  pDiv.className = 'pagination';
-  pDiv.innerHTML = `
-    <button class="action-btn" onclick="changePage(-1)" ${currentPage===1?'disabled style="opacity:0.3"':''}>&lt; PREV</button>
-    <span class="page-info">${currentPage} / ${totalPages}</span>
-    <button class="action-btn" onclick="changePage(1)" ${currentPage===totalPages?'disabled style="opacity:0.3"':''}>NEXT &gt;</button>
-  `;
-  container.appendChild(pDiv);
-}
-}
-
-// 일반 사용자용 작성창
-window.renderWrite=function(){
-const container=document.getElementById('postList')
-container.innerHTML=`
-<div class="card" style="cursor:default">
-<h2>NEW SIGNAL</h2>
-<select id="w_category">
-<option>잡담</option><option>정보</option><option>질문</option>
-<option>거래</option><option>도움</option>
-</select>
-<input id="w_nick" placeholder="생존자 호출명(닉네임)">
-<input id="w_pass" type="password" placeholder="기록 암호(비밀번호)">
-<input id="w_title" placeholder="제목">
-<textarea id="w_content" placeholder="상세 내용을 입력하십시오..." style="height:200px"></textarea>
-<input id="w_image" placeholder="첨부 이미지 URL (선택)">
-<button class="action-btn" style="background:#ff8c00; color:#000; border:none; font-weight:bold;" onclick="submitPost(false)">데이터 송신</button>
-<button class="action-btn" onclick="renderList()">취소</button>
-</div>
-`
-}
-
-// 관리자용 공지 작성창
-window.renderAdminWrite=function(){
-const container=document.getElementById('postList')
-container.innerHTML=`
-<div class="card" style="cursor:default; border-left-color: #ff8c00;">
-<h2 style="color:#ff8c00">ADMIN ENCRYPTED SIGNAL (NOTICE)</h2>
-<select id="w_category">
-<option>공지</option><option>잡담</option><option>정보</option><option>질문</option><option>거래</option><option>도움</option>
-</select>
-<label style="display:block;margin-top:10px; font-size:12px;">
-<input type="checkbox" id="w_pin" style="width:auto; margin-top:0;" checked> 최상단 고정 (관리자 전용)
-</label>
-<input id="w_admin" placeholder="관리자 보안 코드를 입력하세요" type="password">
-<input id="w_nick" value="ADMIN" placeholder="생존자 호출명(닉네임)">
-<input id="w_pass" type="password" placeholder="기록 암호(비밀번호)">
-<input id="w_title" placeholder="제목">
-<textarea id="w_content" placeholder="공지 사항을 입력하십시오..." style="height:200px"></textarea>
-<input id="w_image" placeholder="첨부 이미지 URL (선택)">
-<button class="action-btn" style="background:#ff8c00; color:#000; border:none; font-weight:bold;" onclick="submitPost(true)">마스터 권한 송신</button>
-<button class="action-btn" onclick="renderList()">취소</button>
-</div>
-`
-}
-
-window.submitPost=function(isAdminCall){
-const pinElement = document.getElementById('w_pin');
-const adminElement = document.getElementById('w_admin');
-
-const isPinned = pinElement ? pinElement.checked : false;
-const category = document.getElementById('w_category').value;
-const adminInput = adminElement ? adminElement.value : "";
-
-let shouldApprove = (category.includes("공지") || isPinned) && adminInput === ADMIN_PIN_CODE;
-
-if((category.includes("공지") || isPinned) && adminInput !== ADMIN_PIN_CODE){
-    alert("권한이 거부되었습니다. 보안 코드를 확인하십시오."); return;
-}
-
-if(!shouldApprove && adminInput === ADMIN_PIN_CODE) {
-    shouldApprove = true;
-}
-
-push(postsRef,{
-category: category,
-nickname:document.getElementById('w_nick').value,
-password:document.getElementById('w_pass').value,
-title:document.getElementById('w_title').value,
-content:document.getElementById('w_content').value,
-image:document.getElementById('w_image').value||"",
-pinned:isPinned,
-approved:shouldApprove, 
-date:Date.now()
-})
-
-alert(shouldApprove ? "데이터가 즉시 승인 및 송신되었습니다." : "기록이 전송되었습니다. 검토 후 리스트에 등록됩니다.");
-currentPage = 1; renderList()
-}
-
-window.editPost=function(key){
-    const post = allPosts[key];
-    openPasswordModal("데이터 수정 권한 확인", (pw)=>{
-        if(pw === post.password || pw === MASTER_DELETE_CODE){
-            const container=document.getElementById('postList');
-            const data = post.pendingUpdate || post;
-            container.innerHTML=`
-            <div class="card" style="cursor:default">
-            <h2>RE-WRITE REPORT ${post.pendingUpdate ? '(검토중인 내용)' : ''}</h2>
-            <select id="e_category">
-                <option ${data.category==='잡담'?'selected':''}>잡담</option>
-                <option ${data.category==='정보'?'selected':''}>정보</option>
-                <option ${data.category==='질문'?'selected':''}>질문</option>
-                <option ${data.category==='거래'?'selected':''}>거래</option>
-                <option ${data.category==='도움'?'selected':''}>도움</option>
-                <option ${data.category==='공지'?'selected':''}>공지</option>
-            </select>
-            <label style="display:block;margin-top:10px; font-size:12px;">
-                <input type="checkbox" id="e_pin" style="width:auto" ${data.pinned?'checked':''}> 최상단 고정 (관리자용)
-            </label>
-            <input id="e_admin" placeholder="관리자 보안 코드 (즉시 반영)">
-            <input id="e_title" value="${escapeHTML(data.title)}" placeholder="제목">
-            <textarea id="e_content" style="height:200px" placeholder="내용">${escapeHTML(data.content)}</textarea>
-            <input id="e_image" value="${data.image||''}" placeholder="이미지 URL">
-            <button class="action-btn" style="background:#ff8c00; color:#000; border:none; font-weight:bold;" onclick="updatePost('${key}')">수정 신청</button>
-            <button class="action-btn" onclick="renderDetail('${key}')">취소</button>
-            </div>`;
-        } else { alert("보안 코드가 일치하지 않습니다."); }
-    });
-}
-
-window.updatePost=function(key){
-    const post = allPosts[key];
-    const isPinned = document.getElementById('e_pin').checked;
-    const category = document.getElementById('e_category').value;
-    const adminInput = document.getElementById('e_admin').value;
-
-    const editData = {
-        category: category,
-        pinned: isPinned,
-        title: document.getElementById('e_title').value,
-        content: document.getElementById('e_content').value,
-        image: document.getElementById('e_image').value
+    const newPost = {
+      id: Date.now(),
+      title,
+      content,
+      author: "익명",
+      comments: 0,
+      tag: menu === "전체" ? "잡담" : menu
     };
 
-    if(adminInput === ADMIN_PIN_CODE){
-        update(ref(db, 'posts/'+key), { ...editData, pendingUpdate: null }).then(()=>{
-            alert("관리자 권한으로 데이터가 즉시 갱신되었습니다.");
-            renderDetail(key);
-        });
-    } else {
-        update(ref(db, 'posts/'+key+'/pendingUpdate'), editData).then(()=>{
-            alert("수정 데이터가 전송되었습니다. 관리자 승인 후 반영됩니다.");
-            renderDetail(key);
-        });
+    setPosts((prev) => [newPost, ...prev]);
+
+    try {
+      if (!API_URL) {
+        return;
+      }
+
+      await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(newPost)
+      });
+    } catch (error) {
+      console.error("게시글 저장 실패", error);
     }
-}
 
-window.approveUpdate = function(key){
-    const post = allPosts[key];
-    if(!post.pendingUpdate) return;
-    update(ref(db, 'posts/'+key), { ...post.pendingUpdate, pendingUpdate: null }).then(()=>{
-        alert("수정 내용이 승인되었습니다.");
-        renderDetail(key);
-    });
-}
+    setTitle("");
+    setContent("");
 
-window.rejectUpdate = function(key){
-    if(confirm("수정 신청을 반려하시겠습니까?")){
-        update(ref(db, 'posts/'+key), { pendingUpdate: null }).then(()=>{
-            alert("수정 신청이 삭제되었습니다.");
-            renderDetail(key);
-        });
-    }
-}
+    setNotification("게시글이 등록되었습니다.");
+    setIsWriting(false);
+  };
 
-window.renderDetail = function(key){
-currentPostKey=key
-const post=allPosts[key]
-const container=document.getElementById('postList')
+  return (
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans">
+      <header className="border-b border-zinc-800 bg-black sticky top-0 z-50 backdrop-blur">
+        <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
+          <div>
+            <h1 className="text-2xl font-black tracking-tight text-red-500">
+              anomaly:thread
+            </h1>
+            <p className="text-xs text-zinc-500">
+              비인가 이상현상 커뮤니티
+            </p>
+          </div>
 
-const isPreview = isAdminView && post.pendingUpdate;
-const displayData = isPreview ? post.pendingUpdate : post;
+          <div className="flex gap-3 items-center">
+            <input
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setNotification(`검색 중: ${e.target.value || "전체 게시글"}`);
+              }}
+              placeholder="괴현상 검색"
+              className="bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-2 text-sm w-56 outline-none focus:border-red-500"
+            />
 
-let commentsHTML=""
-if(post.comments){
-Object.entries(post.comments).forEach(([cid,c])=>{
-commentsHTML+=`
-<div class='comment'>
-<b>ID: ${escapeHTML(c.nickname)}</b>
-<div class="comment-text"> ${escapeHTML(c.content)}</div>
-${c.image?`<img src="${c.image}" class="comment-image">`:""}
-<div class="time">${formatTime(c.date)}</div>
-<button class="action-btn" onclick="toggleReply('${cid}')">회신</button>
-<button class="action-btn" style="opacity:0.5" onclick="deleteComment('${key}','${cid}','${c.password}')">삭제</button>
-<div id="replyBox-${cid}" style="display:none; margin-top:15px; border-top:1px dashed #444; padding-top:10px;">
-<input id="r_nick-${cid}" placeholder="생존자 호출명(닉네임)" style="width:48%"><input id="r_pass-${cid}" type="password" placeholder="암호" style="width:48%">
-<textarea id="r_content-${cid}" placeholder="내용을 입력하세요"></textarea>
-<button class="action-btn" style="background:#555; color:#fff;" onclick="submitReply('${key}','${cid}')">회신하기</button>
-</div>`
-if(c.replies){
-Object.entries(c.replies).forEach(([rid,r])=>{
-commentsHTML+=`<div class='reply'><b>└ ID: ${escapeHTML(r.nickname)}</b><div class="reply-text">${escapeHTML(r.content)}</div><div class="time">${formatTime(r.date)}</div><button class="action-btn" style="opacity:0.5; padding:2px 6px;" onclick="deleteReply('${key}','${cid}','${rid}','${r.password}')">삭제</button></div>`
-})
-}
-commentsHTML+="</div>"
-})
-}
+            <button
+              onClick={() => setIsWriting(true)}
+              className="bg-red-600 hover:bg-red-500 transition px-4 py-2 rounded-xl text-sm font-semibold"
+            >
+              글쓰기
+            </button>
+          </div>
+        </div>
+      </header>
 
-container.innerHTML=`
-<div class='card' style="cursor:default">
-<div style="display:flex; justify-content:space-between; align-items:flex-start;">
-    <button class='action-btn' onclick="renderList()">← 목록</button>
-    <div>
-        ${(isAdminView && !post.approved) ? `<button class='action-btn' style="background:#334433; color:#9cff57;" onclick="approvePost('${key}')">신규 승인</button>` : ''}
-        ${(isAdminView && post.pendingUpdate) ? `
-            <button class='action-btn' style="background:#223344; border-color:#44aaff; color:#44aaff" onclick="approveUpdate('${key}')">수정 승인</button>
-            <button class='action-btn' style="border-color:#ff4444; color:#ff4444" onclick="rejectUpdate('${key}')">수정 반려</button>
-        ` : ''}
-        <button class='action-btn' style="border-color:#ff8c00; color:#ff8c00" onclick="editPost('${key}')">기록 수정</button>
-        <button class='action-btn' style="border-color:#555; color:#888" onclick="deletePost('${key}','${post.password}')">기록 말소</button>
+      <main className="max-w-6xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-[260px_1fr_280px] gap-6">
+        <aside className="space-y-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 shadow-lg">
+            <h2 className="font-bold text-lg mb-3 text-red-400">메뉴</h2>
+
+            <ul className="space-y-2 text-sm text-zinc-300">
+              {menus.map((item) => (
+                <li
+                  key={item}
+                  onClick={() => {
+                    setMenu(item);
+                    setNotification(`${item} 메뉴에 접속했습니다.`);
+                  }}
+                  className={`cursor-pointer rounded-lg px-3 py-2 transition ${
+                    menu === item
+                      ? "bg-red-500/20 text-red-300"
+                      : "hover:text-red-400"
+                  }`}
+                >
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 shadow-lg">
+            <h2 className="font-bold text-lg mb-3 text-red-400">
+              공지
+            </h2>
+
+            <div className="space-y-3 text-sm">
+              {notices.length === 0 && (
+                <div className="text-zinc-500 text-sm">
+                  등록된 공지가 없습니다.
+                </div>
+              )}
+
+              {notices.map((item, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => setNotification(`공지 확인: ${item}`)}
+                  className="border-b border-zinc-800 pb-2 text-zinc-300 hover:text-white cursor-pointer transition"
+                >
+                  • {item}
+                </div>
+              ))}
+            </div>
+          </div>
+        </aside>
+
+        <section className="space-y-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 overflow-hidden relative">
+            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_top,red,transparent_70%)]" />
+
+            <div className="relative z-10 flex items-center justify-between">
+              <div>
+                <div className="mb-2 text-xs text-green-400 animate-pulse">
+                  SYSTEM // {notification}
+                </div>
+
+                <h2 className="text-3xl font-black tracking-tight">
+                  anomaly:thread
+                </h2>
+
+                <p className="text-zinc-500 text-sm mt-2">
+                  이상현상 생존자 커뮤니티
+                </p>
+              </div>
+
+              <div className="text-right">
+                <div className="text-sm text-zinc-500 mb-2">
+                  현재 카테고리
+                </div>
+
+                <div className="inline-flex px-4 py-2 rounded-xl bg-red-500/20 border border-red-500/20 text-red-300 font-semibold">
+                  {menu}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-lg">
+            <div className="flex items-center justify-between border-b border-zinc-800 px-5 py-4">
+              <h2 className="font-bold text-lg">게시글</h2>
+              <div className="text-xs text-zinc-500">실시간</div>
+            </div>
+
+            <div>
+              {filteredPosts.length === 0 && (
+                <div className="px-5 py-10 text-center text-zinc-500">
+                  아직 작성된 게시글이 없습니다.
+                </div>
+              )}
+
+              {filteredPosts.map((post) => (
+                <div
+                  key={post.id}
+                  onClick={() => {
+                    const updatedPost = {
+                      ...post
+                    };
+
+                    setSelectedPost(updatedPost);
+
+                    setPosts((prev) =>
+                      prev.map((p) =>
+                        p.id === post.id
+                          ? { ...p }
+                          : p
+                      )
+                    );
+
+                    setNotification(`게시글 열람 중: ${post.title}`);
+                  }}
+                  className="px-5 py-4 border-b border-zinc-800 hover:bg-zinc-800/40 transition cursor-pointer"
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-[11px] px-2 py-1 rounded-full bg-red-500/20 text-red-300 border border-red-500/20">
+                      {post.tag}
+                    </span>
+                  </div>
+
+                  <div className="font-semibold text-zinc-100 mb-2 hover:text-red-400">
+                    {post.title}
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-zinc-500">
+                    <div className="flex items-center gap-4">
+                      <span>{post.author}</span>
+                      
+                      <span>댓글 {post.comments}</span>
+                    </div>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+
+                        if (likedPosts.includes(post.id)) {
+                          setLikedPosts(
+                            likedPosts.filter((p) => p !== post.id)
+                          );
+                        } else {
+                          setLikedPosts([...likedPosts, post.id]);
+                        }
+                      }}
+                      className={`px-2 py-1 rounded-lg transition ${
+                        likedPosts.includes(post.id)
+                          ? "bg-red-500/20 text-red-300"
+                          : "bg-zinc-800 hover:bg-zinc-700"
+                      }`}
+                    >
+                      {likedPosts.includes(post.id)
+                        ? "♥ 저장됨"
+                        : "♡ 저장"}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <aside>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 shadow-lg">
+            <h2 className="font-bold text-lg text-red-400 mb-3">
+              서버 상태
+            </h2>
+
+            <div className="text-sm text-zinc-400 leading-relaxed">
+              현재 커뮤니티 데이터는 사용자 작성 기반으로만 표시됩니다.
+            </div>
+          </div>
+        </aside>
+      </main>
+
+      {selectedPost && (
+        <div className="fixed inset-0 z-[90] bg-zinc-950 overflow-y-auto animate-in fade-in duration-300">
+          <div className="max-w-4xl mx-auto min-h-screen px-4 py-8">
+            <div className="bg-zinc-900 border border-red-900 rounded-3xl p-8 shadow-2xl">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <div className="text-xs text-red-400 mb-1">
+                    {selectedPost.tag}
+                  </div>
+
+                  <h3 className="text-2xl font-black">
+                    {selectedPost.title}
+                  </h3>
+                </div>
+
+                <button
+                  onClick={() => setSelectedPost(null)}
+                  className="text-sm bg-zinc-800 hover:bg-zinc-700 px-4 py-2 rounded-xl transition"
+                >
+                  ← 목록으로
+                </button>
+              </div>
+
+              <div className="text-sm text-zinc-400 mb-6">
+                작성자 {selectedPost.author} · 댓글 {selectedPost.comments}
+              </div>
+
+              <div className="space-y-4 text-zinc-300 leading-relaxed text-sm">
+                <p>{selectedPost.content}</p>
+              </div>
+
+              <div className="mt-10 pt-6 border-t border-zinc-800 text-xs text-zinc-500">
+                anomaly:thread archive system
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isWriting && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+          <div className="w-full max-w-2xl bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <div className="text-red-400 text-sm mb-1">
+                  새 게시글 작성
+                </div>
+
+                <h2 className="text-2xl font-black">
+                  게시글 작성
+                </h2>
+              </div>
+
+              <button
+                onClick={() => setIsWriting(false)}
+                className="bg-zinc-800 hover:bg-zinc-700 px-4 py-2 rounded-xl text-sm"
+              >
+                닫기
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="제목 입력"
+                className="w-full bg-black/40 border border-zinc-700 rounded-xl px-4 py-3 outline-none focus:border-red-500"
+              />
+
+              <textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="내용 입력"
+                rows={8}
+                className="w-full bg-black/40 border border-zinc-700 rounded-xl px-4 py-3 outline-none resize-none focus:border-red-500"
+              />
+
+              <button
+                onClick={handleCreatePost}
+                className="w-full bg-red-600 hover:bg-red-500 transition py-3 rounded-xl font-semibold"
+              >
+                게시글 등록
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
-</div>
-<hr>
-${isPreview ? `<div style="background:#112244; color:#44aaff; padding:10px; border-radius:4px; font-size:12px; margin-bottom:15px; border:1px solid #44aaff;">[LOG] 데이터 수정본 프리뷰 모드입니다.</div>` : ''}
-${(!isAdminView && post.pendingUpdate) ? `<div style="color:#44aaff; font-size:12px; margin-bottom:10px;">* 이 기록은 현재 데이터 갱신을 위해 검토 중입니다.</div>` : ''}
-<h2>${displayData.pinned?'⚠️ ':''}${escapeHTML(displayData.title)}</h2>
-<div class='meta'>ID: ${escapeHTML(post.nickname)} | TAG: ${displayData.category} | ${formatTime(post.date)}</div>
-<p style="color: #eee; margin: 25px 0; line-height: 1.8; font-size:15px; white-space:pre-wrap;">${escapeHTML(displayData.content)}</p>
-${displayData.image?`<img src="${displayData.image}" class="post-image">`:""}
-<h3 class="comment-section-title">RADIO LOGS</h3>
-${commentsHTML}
-<div style="background:#111; padding:20px; margin-top:30px; border:1px solid #333;">
-    <h3 style="font-size:14px; margin-bottom:10px; color:#ff8c00;">무전 남기기</h3>
-    <div style="display:flex; justify-content:space-between;">
-        <input id='c_nick' placeholder='생존자 호출명(닉네임)' style="width:49%"><input id='c_pass' type='password' placeholder='암호' style="width:49%">
-    </div>
-    <textarea id='c_content' placeholder='내용을 입력해주세요' style="height:80px"></textarea>
-    <input id='c_image' placeholder='이미지 URL (선택)'>
-    <button class='action-btn' style="width:100%; padding:12px; margin-top:10px; background:#ff8c00; color:#000; border:none; font-weight:bold;" onclick="submitComment('${key}')">무전 송신</button>
-</div>
-</div>`
+  );
 }
-
-window.approvePost = function(key){
-    update(ref(db, 'posts/'+key), { approved: true }).then(()=>{
-        alert("기록이 승인되었습니다."); renderDetail(key);
-    });
-}
-
-window.submitComment=function(postKey){
-    const nick = document.getElementById('c_nick').value;
-    const content = document.getElementById('c_content').value;
-    if(!nick || !content){ alert("내용을 입력해주세요"); return; }
-    push(ref(db,'posts/'+postKey+'/comments'),{ nickname:nick, password:document.getElementById('c_pass').value, content:content, image:document.getElementById('c_image').value||"", date:Date.now() })
-}
-
-window.submitReply=function(postKey,commentKey){
-    const nick = document.getElementById("r_nick-"+commentKey).value;
-    const content = document.getElementById("r_content-"+commentKey).value;
-    if(!nick || !content){ alert("내용을 입력해주세요"); return; }
-    push(ref(db,'posts/'+postKey+'/comments/'+commentKey+'/replies'),{ nickname:nick, password:document.getElementById("r_pass-"+commentKey).value, content:content, date:Date.now() })
-}
-
-window.deletePost=function(key,password){
-    openPasswordModal(" 삭제 인증", (input)=>{
-        if(input===password || input===MASTER_DELETE_CODE){ remove(ref(db,'posts/'+key)).then(()=>{ currentPostKey=null; renderList(); }) }
-        else{ alert("인증 실패"); }
-    })
-}
-
-window.deleteComment=function(postKey,commentKey,password){
-    openPasswordModal("무전 기록 삭제 인증", (input)=>{
-        if(input===password || input===MASTER_DELETE_CODE){ remove(ref(db,'posts/'+postKey+'/comments/'+commentKey)).then(()=>{ renderDetail(postKey) }) }
-        else{ alert("인증 실패"); }
-    })
-}
-
-window.deleteReply=function(postKey,commentKey,replyKey,password){
-    openPasswordModal("회신 기록 삭제 인증", (input)=>{
-        if(input===password || input===MASTER_DELETE_CODE){ remove(ref(db,'posts/'+postKey+'/comments/'+commentKey+'/replies/'+replyKey)).then(()=>{ renderDetail(postKey) }) }
-        else{ alert("인증 실패"); }
-    })
-}
-
-window.toggleReply=function(cid){ const box=document.getElementById("replyBox-"+cid); box.style.display=box.style.display==="none"?"block":"none"; }
-
-function formatTime(timestamp){
-    const d=new Date(timestamp); const pad = (n) => n.toString().padStart(2, '0');
-    return `2033.${pad(d.getMonth()+1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-
-function escapeHTML(str){ return str?str.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&#039;"):"" }
-</script>
-</body>
-</html>
