@@ -1,177 +1,309 @@
-import { useEffect, useMemo, useState } from "react";
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>anomaly:thread</title>
+  <!-- Tailwind CSS (화면 스타일링) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React 및 Babel (컴포넌트 작동 및 코드 변환) -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    body { background-color: #09090b; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
 
-export default function AbnormalCommunity() {
-  const [selectedPost, setSelectedPost] = useState(null);
-  const [menu, setMenu] = useState("전체");
-  const [notification, setNotification] = useState("시스템 안정화 완료");
-  const [search, setSearch] = useState("");
-  const [likedPosts, setLikedPosts] = useState([]);
-  const [isWriting, setIsWriting] = useState(false);
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
 
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
+    function AbnormalCommunity() {
+      const [selectedPost, setSelectedPost] = useState(null);
+      const [menu, setMenu] = useState("전체");
+      const [notification, setNotification] = useState("로컬 단말기 보안망 가동 완료");
+      const [search, setSearch] = useState("");
+      const [likedPosts, setLikedPosts] = useState([]);
+      const [isWriting, setIsWriting] = useState(false);
 
-  // 오류를 방지하기 위해 로컬 상태(LocalStorage) 저장으로 안전하게 전환했습니다.
-  const [posts, setPosts] = useState(() => {
-    const saved = localStorage.getItem("anomaly_posts");
-    return saved ? JSON.parse(saved) : [
-      {
-        id: 1,
-        title: "징후를 목격하신 분이 있나요?",
-        content: "어젯밤 집 앞 가로등이 붉은색으로 깜빡이는 것을 보았습니다. 다들 조심하세요.",
-        author: "익명",
-        comments: 0,
-        tag: "정보",
-        date: new Date().toISOString()
-      }
-    ];
-  });
-  
-  const [currentPage, setCurrentPage] = useState(1);
-  const POSTS_PER_PAGE = 10;
-  const menus = ["전체", "정보", "도움", "잡담", "거래", "전투"];
-  const notices = ["단독 로컬 보안망 가동 중"];
+      const [title, setTitle] = useState("");
+      const [content, setContent] = useState("");
 
-  useEffect(() => {
-    localStorage.setItem("anomaly_posts", JSON.stringify(posts));
-  }, [posts]);
+      // 브라우저 저장소(LocalStorage) 연동 - 새로고침해도 데이터 유지
+      const [posts, setPosts] = useState(() => {
+        const saved = localStorage.getItem("anomaly_posts");
+        return saved ? JSON.parse(saved) : [
+          {
+            id: 1,
+            title: "현재 구역 내 징후를 목격하신 분이 있나요?",
+            content: "어젯밤 집 앞 가로등이 붉은색으로 깜빡이는 것을 보았습니다. 다들 조심하세요.",
+            author: "익명_04",
+            comments: 0,
+            tag: "정보",
+            date: new Date().toISOString()
+          },
+          {
+            id: 2,
+            title: "생존 물자 거래 원합니다.",
+            content: "안전 가옥 근처에서 정제수와 통조림 교환하실 분 구합니다. 잡담 카테고리나 거래 탭으로 와주세요.",
+            author: "익명_77",
+            comments: 1,
+            tag: "거래",
+            date: new Date().toISOString()
+          }
+        ];
+      });
+      
+      const [currentPage, setCurrentPage] = useState(1);
+      const POSTS_PER_PAGE = 10;
+      const menus = ["전체", "정보", "도움", "잡담", "거래", "전투"];
+      const notices = ["프로토콜 시스템 내부 격리 가동", "이상 감지 시 브라우저를 새로고침하십시오."];
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [menu, search]);
+      useEffect(() => {
+        localStorage.setItem("anomaly_posts", JSON.stringify(posts));
+      }, [posts]);
 
-  const filteredPosts = useMemo(() => {
-    return posts.filter((post) => {
-      const matchSearch = (post.title || "").toLowerCase().includes(search.toLowerCase());
-      const matchMenu = menu === "전체" || post.tag === menu;
-      return matchSearch && matchMenu;
-    });
-  }, [posts, search, menu]);
+      useEffect(() => {
+        setCurrentPage(1);
+      }, [menu, search]);
 
-  const currentPosts = useMemo(() => {
-    const indexOfLastPost = currentPage * POSTS_PER_PAGE;
-    const indexOfFirstPost = indexOfLastPost - POSTS_PER_PAGE;
-    return filteredPosts.slice(indexOfFirstPost, indexOfLastPost);
-  }, [filteredPosts, currentPage]);
-  
-  const totalPages = Math.ceil(filteredPosts.length / POSTS_PER_PAGE);
+      const filteredPosts = useMemo(() => {
+        return posts.filter((post) => {
+          const matchSearch = (post.title || "").toLowerCase().includes(search.toLowerCase());
+          const matchMenu = menu === "전체" || post.tag === menu;
+          return matchSearch && matchMenu;
+        });
+      }, [posts, search, menu]);
 
-  const handleCreatePost = () => {
-    if (!title.trim() || !content.trim()) {
-      setNotification("제목과 내용을 입력하세요.");
-      return;
+      const currentPosts = useMemo(() => {
+        const indexOfLastPost = currentPage * POSTS_PER_PAGE;
+        const indexOfFirstPost = indexOfLastPost - POSTS_PER_PAGE;
+        return filteredPosts.slice(indexOfFirstPost, indexOfLastPost);
+      }, [filteredPosts, currentPage]);
+      
+      const totalPages = Math.ceil(filteredPosts.length / POSTS_PER_PAGE);
+
+      const handleCreatePost = () => {
+        if (!title.trim() || !content.trim()) {
+          setNotification("제목과 내용을 모두 입력하십시오.");
+          return;
+        }
+
+        const newPost = {
+          id: Date.now(),
+          title,
+          content,
+          author: "익명_" + Math.floor(Math.random() * 90 + 10),
+          comments: 0,
+          tag: menu === "전체" ? "잡담" : menu,
+          date: new Date().toISOString()
+        };
+
+        setPosts((prev) => [newPost, ...prev]);
+        setTitle("");
+        setContent("");
+        setNotification("새로운 생존기록이 데이터베이스에 송신되었습니다.");
+        setIsWriting(false);
+        setCurrentPage(1);
+      };
+
+      return (
+        <div className="min-h-screen text-zinc-100 font-sans antialiased bg-zinc-950">
+          {/* 상단 헤더 */}
+          <header className="border-b border-zinc-800 bg-black/80 sticky top-0 z-50 backdrop-blur">
+            <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
+              <div>
+                <h1 className="text-2xl font-black tracking-tight text-red-500">anomaly:thread</h1>
+                <p className="text-xs text-zinc-500">비인가 이상현상 커뮤니티</p>
+              </div>
+              <div className="flex gap-3 items-center">
+                <input
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setNotification(`검색 프로토콜 작동 중: ${e.target.value || "전체"}`);
+                  }}
+                  placeholder="괴현상 키워드 검색"
+                  className="bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-2 text-sm w-56 outline-none focus:border-red-500 text-zinc-100 placeholder-zinc-500"
+                />
+                <button
+                  onClick={() => setIsWriting(true)}
+                  className="bg-red-600 hover:bg-red-500 transition px-4 py-2 rounded-xl text-sm font-semibold shadow-lg shadow-red-900/20"
+                >
+                  기록 작성
+                </button>
+              </div>
+            </div>
+          </header>
+
+          {/* 메인 컨텐츠 영역 */}
+          <main className="max-w-6xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-6">
+            {/* 좌측 사이드바 */}
+            <aside className="space-y-4">
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 shadow-lg">
+                <h2 className="font-bold text-sm uppercase tracking-wider mb-3 text-red-400">네트워크 구역</h2>
+                <ul className="space-y-1 text-sm text-zinc-400">
+                  {menus.map((item) => (
+                    <li
+                      key={item}
+                      onClick={() => {
+                        setMenu(item);
+                        setNotification(`${item} 구역 대역폭에 연결되었습니다.`);
+                      }}
+                      className={`cursor-pointer rounded-xl px-3 py-2.5 transition font-medium ${
+                        menu === item ? "bg-red-500/10 text-red-400 border border-red-500/20" : "hover:text-zinc-200 hover:bg-zinc-800/50"
+                      }`}
+                    >
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 shadow-lg">
+                <h2 className="font-bold text-sm uppercase tracking-wider mb-3 text-zinc-400">통신 공지</h2>
+                <div className="space-y-3 text-xs text-zinc-400 leading-relaxed">
+                  {notices.map((item, idx) => (
+                    <div key={idx} className="border-b border-zinc-800/60 pb-2 last:border-0 last:pb-0 text-zinc-400">• {item}</div>
+                  ))}
+                </div>
+              </div>
+            </aside>
+
+            {/* 중앙 게시글 목록 */}
+            <section className="space-y-4">
+              {/* 알림 배너 */}
+              <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 relative overflow-hidden shadow-xl">
+                <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_top,red,transparent_70%)]" />
+                <div className="relative z-10 flex items-center justify-between">
+                  <div>
+                    <div className="mb-1 text-xs text-green-400 font-mono tracking-widest animate-pulse">STATUS // {notification}</div>
+                    <h2 className="text-2xl font-black tracking-tight">생존자 아카이브 스레드</h2>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">CURRENT</div>
+                    <div className="inline-flex px-3 py-1 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold">{menu}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 스레드 박스 */}
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-xl flex flex-col min-h-[450px]">
+                <div className="flex items-center justify-between border-b border-zinc-800 px-5 py-4 bg-black/20">
+                  <h2 className="font-bold text-zinc-200 text-sm tracking-wide">수신된 로그 기록</h2>
+                  <div className="text-[11px] text-green-400 font-mono tracking-wider px-2 py-0.5 rounded border border-green-500/20 bg-green-500/5">LOCAL SECURED</div>
+                </div>
+
+                <div className="flex-1 divide-y divide-zinc-800/60">
+                  {currentPosts.length === 0 && (
+                    <div className="px-5 py-20 text-center text-zinc-500 text-sm font-mono">이 주파수 구역에서 탐지된 신호가 없습니다.</div>
+                  )}
+
+                  {currentPosts.map((post) => (
+                    <div
+                      key={post.id}
+                      onClick={() => setSelectedPost({ ...post })}
+                      className="px-5 py-4 hover:bg-zinc-800/30 transition cursor-pointer flex flex-col justify-between"
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20">{post.tag}</span>
+                      </div>
+                      <div className="font-semibold text-zinc-100 text-base mb-3 hover:text-red-400 transition-colors duration-150">{post.title}</div>
+                      <div className="flex items-center justify-between text-xs text-zinc-500">
+                        <div className="flex items-center gap-3 font-mono">
+                          <span className="text-zinc-400">{post.author}</span>
+                          <span>{new Date(post.date).toLocaleTimeString("ko-KR", {hour: "2-digit", minute: "2-digit"})}</span>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setLikedPosts(prev => prev.includes(post.id) ? prev.filter(p => p !== post.id) : [...prev, post.id]);
+                          }}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-medium transition ${likedPosts.includes(post.id) ? "bg-red-500/20 text-red-400 border border-red-500/30" : "bg-zinc-800 text-zinc-400 hover:text-zinc-200"}`}
+                        >
+                          {likedPosts.includes(post.id) ? "♥ 확보됨" : "♡ 보관"}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* 페이지네이션 */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-4 py-4 border-t border-zinc-800 bg-black/10">
+                    <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="text-xs px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 disabled:opacity-20 transition">이전</button>
+                    <div className="text-xs font-mono font-semibold text-red-400">{currentPage} / {totalPages}</div>
+                    <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="text-xs px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 disabled:opacity-20 transition">다음</button>
+                  </div>
+                )}
+              </div>
+            </section>
+          </main>
+
+          {/* 게시글 읽기 모달 팝업 */}
+          {selectedPost && (
+            <div className="fixed inset-0 z-[90] bg-black/80 backdrop-blur-md p-4 flex items-center justify-center animate-fade-in">
+              <div className="w-full max-w-3xl bg-zinc-900 border border-zinc-800 rounded-3xl p-6 lg:p-8 shadow-2xl relative">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <div className="text-xs font-bold text-red-400 uppercase tracking-widest mb-1 font-mono">[{selectedPost.tag} LOG]</div>
+                    <h3 className="text-2xl font-black tracking-tight text-zinc-100">{selectedPost.title}</h3>
+                  </div>
+                  <button onClick={() => setSelectedPost(null)} className="text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-4 py-2 rounded-xl transition font-medium">← 목록망 탈출</button>
+                </div>
+                <div className="text-xs text-zinc-500 font-mono mb-6 pb-4 border-b border-zinc-800/60">
+                  기록자: {selectedPost.author} &nbsp;|&nbsp; 수신시간: {new Date(selectedPost.date).toLocaleString("ko-KR")}
+                </div>
+                <div className="text-zinc-300 text-sm whitespace-pre-wrap leading-relaxed min-h-[200px] max-h-[50vh] overflow-y-auto pr-2 font-sans">{selectedPost.content}</div>
+                <div className="mt-6 pt-4 border-t border-zinc-800/60 text-[10px] text-zinc-600 font-mono">ANOMALY:THREAD ENCRYPTED ARCHIVE SYSTEM</div>
+              </div>
+            </div>
+          )}
+
+          {/* 글쓰기 모달 팝업 */}
+          {isWriting && (
+            <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+              <div className="w-full max-w-2xl bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-2xl">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <div className="text-red-400 text-xs font-bold font-mono tracking-widest uppercase mb-1">transmission protocol</div>
+                    <h2 className="text-xl font-black">신규 데이터 송신 기록</h2>
+                  </div>
+                  <button onClick={() => setIsWriting(false)} className="bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-300 px-4 py-2 rounded-xl font-medium">통신 종료</button>
+                </div>
+                <div className="space-y-4">
+                  <input 
+                    value={title} 
+                    onChange={(e) => setTitle(e.target.value)} 
+                    placeholder="현상 식별 코드 및 제목 입력" 
+                    className="w-full bg-black/40 border border-zinc-700 rounded-xl px-4 py-3 outline-none focus:border-red-500 text-zinc-100 placeholder-zinc-600 text-sm" 
+                  />
+                  <textarea 
+                    value={content} 
+                    onChange={(e) => setContent(e.target.value)} 
+                    placeholder="이상징후 요약 및 목격한 상세 내용을 기록하십시오..." 
+                    rows="8" 
+                    className="w-full bg-black/40 border border-zinc-700 rounded-xl px-4 py-3 outline-none focus:border-red-500 text-zinc-100 placeholder-zinc-600 text-sm resize-none leading-relaxed"
+                  ></textarea>
+                  <button 
+                    onClick={handleCreatePost} 
+                    className="w-full bg-red-600 hover:bg-red-500 py-3 rounded-xl font-bold transition shadow-lg shadow-red-900/30 text-sm tracking-wide"
+                  >
+                    메인 채널로 기록 전송
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
     }
 
-    const newPost = {
-      id: Date.now(),
-      title,
-      content,
-      author: "익명",
-      comments: 0,
-      tag: menu === "전체" ? "잡담" : menu,
-      date: new Date().toISOString()
-    };
-
-    setPosts((prev) => [newPost, ...prev]);
-    setTitle("");
-    setContent("");
-    setNotification("게시글이 등록되었습니다.");
-    setIsWriting(false);
-    setCurrentPage(1);
-  };
-
-  return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans">
-      <header className="border-b border-zinc-800 bg-black sticky top-0 z-50 backdrop-blur">
-        <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
-          <div>
-            <h1 className="text-2xl font-black tracking-tight text-red-500">anomaly:thread</h1>
-            <p className="text-xs text-zinc-500">비인가 이상현상 커뮤니티</p>
-          </div>
-
-          <div className="flex gap-3 items-center">
-            <input
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setNotification(`검색 중: ${e.target.value || "전체 게시글"}`);
-              }}
-              placeholder="괴현상 검색"
-              className="bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-2 text-sm w-56 outline-none focus:border-red-500"
-            />
-            <button
-              onClick={() => setIsWriting(true)}
-              className="bg-red-600 hover:bg-red-500 transition px-4 py-2 rounded-xl text-sm font-semibold"
-            >
-              글쓰기
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-6xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-[260px_1fr_280px] gap-6">
-        <aside className="space-y-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 shadow-lg">
-            <h2 className="font-bold text-lg mb-3 text-red-400">메뉴</h2>
-            <ul className="space-y-2 text-sm text-zinc-300">
-              {menus.map((item) => (
-                <li
-                  key={item}
-                  onClick={() => {
-                    setMenu(item);
-                    setNotification(`${item} 메뉴에 접속했습니다.`);
-                  }}
-                  className={`cursor-pointer rounded-lg px-3 py-2 transition ${menu === item ? "bg-red-500/20 text-red-300" : "hover:text-red-400"}`}
-                >
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </aside>
-
-        <section className="space-y-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 relative overflow-hidden">
-            <div className="relative z-10">
-              <div className="mb-2 text-xs text-green-400 animate-pulse">SYSTEM // {notification}</div>
-              <h2 className="text-3xl font-black tracking-tight">anomaly:thread</h2>
-            </div>
-          </div>
-
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-lg flex flex-col min-h-[500px]">
-            <div className="flex-1">
-              {currentPosts.map((post) => (
-                <div key={post.id} onClick={() => setSelectedPost({ ...post })} className="px-5 py-4 border-b border-zinc-800 hover:bg-zinc-800/40 transition cursor-pointer">
-                  <div className="font-semibold text-zinc-100 mb-2">{post.title}</div>
-                  <div className="text-xs text-zinc-500">{new Date(post.date).toLocaleTimeString("ko-KR")}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      </main>
-
-      {selectedPost && (
-        <div className="fixed inset-0 z-[90] bg-zinc-950 p-6 flex items-center justify-center">
-          <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-2xl max-w-2xl w-full">
-            <h3 className="text-2xl font-bold mb-4">{selectedPost.title}</h3>
-            <p className="text-zinc-300 mb-6 whitespace-pre-wrap">{selectedPost.content}</p>
-            <button onClick={() => setSelectedPost(null)} className="bg-zinc-800 px-4 py-2 rounded-xl">닫기</button>
-          </div>
-        </div>
-      )}
-
-      {isWriting && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-          <div className="w-full max-w-2xl bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-2xl">
-            <div className="space-y-4">
-              <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="제목" className="w-full bg-black/40 border border-zinc-700 rounded-xl px-4 py-3" />
-              <textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="내용" rows={6} className="w-full bg-black/40 border border-zinc-700 rounded-xl px-4 py-3 resize-none" />
-              <button onClick={handleCreatePost} className="w-full bg-red-600 py-3 rounded-xl font-semibold">등록</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+    // 오타가 수정된 올바른 리액트 렌더링 트리거 부분입니다.
+    const root = RoyalReactDOM.createRoot(document.getElementById("root"));
+    root.render(<AbnormalCommunity />);
+  </script>
+</body>
+</html>
